@@ -378,7 +378,7 @@ async function tabReports(body) {
       <div class="figure"><span class="k">Net Profit (${esc(range.from)} → ${esc(range.to)})</span>
       <span class="v ${netProfit < 0 ? 'neg' : 'pos'}">${money(netProfit)}</span></div>
     </div>
-    <div class="card"><h2>Income &amp; Expense</h2>
+    <div class="card"><h2>Income &amp; Expense (${esc(range.from)} → ${esc(range.to)})</h2>
       <div class="section-title">IN</div>
       <div class="figure"><span class="k">Total IN</span><span class="v pos">${money(incomeExpense.inSection.total)}</span></div>
       ${inRows}
