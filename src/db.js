@@ -6,6 +6,10 @@ const path = require('path');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  // Supabase (and most managed Postgres) requires SSL; local docker does not.
+  ...((process.env.DATABASE_URL || '').includes('supabase.co')
+    ? { ssl: { rejectUnauthorized: false } }
+    : {}),
 });
 
 pool.on('error', (err) => {
