@@ -9,12 +9,18 @@ const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
+// Enable SSL for managed Postgres hosts (Supabase, Railway, Neon, ...).
+// Local docker/localhost connections stay non-SSL.
+function wantsSSL(dbUrl) {
+  try {
+    const host = new URL(dbUrl).hostname;
+    return host.includes('.') && !['localhost', '127.0.0.1', '::1'].includes(host);
+  } catch (_) { return false; }
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // Supabase (and most managed Postgres) requires SSL; local docker does not.
-  ...((process.env.DATABASE_URL || '').includes('supabase.co')
-    ? { ssl: { rejectUnauthorized: false } }
-    : {}),
+  ...(wantsSSL(process.env.DATABASE_URL || '') ? { ssl: { rejectUnauthorized: false } } : {}),
 });
 
 pool.on('error', (err) => {
