@@ -529,7 +529,14 @@ async function tabCih(body) {
 /* ---------- Team tab ---------- */
 async function tabTeam(body) {
   if (S.user.role === 'admin') return tabTeamAdmin(body);
-  body.innerHTML = storeBarHtml() + `<div class="card"><h2>Team — Reset Employee Passwords</h2><div id="t_err"></div><div id="t_list" class="muted">Loading…</div></div>`;
+  const stores = myStores();
+  body.innerHTML = storeBarHtml() + `<div class="card"><h2>Team — Create Employee</h2><div id="t_err"></div>
+    <label>Username</label><input id="ne_user" placeholder="username" autocomplete="off">
+    <label>Password</label><input id="ne_pass" placeholder="min 4 chars, letters/numbers" autocomplete="new-password">
+    <label>Assign Stores</label><div>${stores.map((s) =>
+      `<label class="checkline"><input type="checkbox" class="ne_store" value="${s.id}"> ${esc(s.name)}</label>`).join('') || '<div class="muted">No stores assigned.</div>'}</div>
+    <button class="btn" onclick="mgrCreateEmployee()">Create Employee</button></div>
+  <div class="card"><h2>Team — Reset Employee Passwords</h2><div id="t_list" class="muted">Loading…</div></div>`;
   try {
     const { employees } = await api('GET', '/api/manager/employees');
     $('#t_list').innerHTML = employees.map((e) => `
@@ -540,6 +547,19 @@ async function tabTeam(body) {
           <button class="btn small" onclick="mgrResetPw(${e.id})">Reset</button>
         </div></div>`).join('') || '<div class="muted">No employees in your stores.</div>';
   } catch (e) { $('#t_list').innerHTML = `<div class="error">${esc(e.message)}</div>`; }
+}
+async function mgrCreateEmployee() {
+  const errBox = $('#t_err'); errBox.innerHTML = '';
+  try {
+    const storeIds = [...document.querySelectorAll('.ne_store:checked')].map((c) => Number(c.value));
+    await api('POST', '/api/manager/employees', {
+      username: $('#ne_user').value, password: $('#ne_pass').value, storeIds,
+    });
+    errBox.innerHTML = `<div class="success">Employee created.</div>`;
+    $('#ne_user').value = ''; $('#ne_pass').value = '';
+    document.querySelectorAll('.ne_store:checked').forEach((c) => (c.checked = false));
+    await tabTeam($('#tabbody'));
+  } catch (e) { errBox.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
 }
 async function mgrResetPw(id) {
   const errBox = $('#t_err'); errBox.innerHTML = '';

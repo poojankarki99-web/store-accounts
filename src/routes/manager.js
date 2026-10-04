@@ -2,7 +2,7 @@
 
 const express = require('express');
 const { pool } = require('../db');
-const { requireAuth, requireRole, requireStoreAccess, accessibleStoreIds, validPassword, hashPassword } = require('../auth');
+const { requireAuth, requireRole, requireStoreAccess, accessibleStoreIds, validPassword, validUsername, hashPassword, getUserStores } = require('../auth');
 const { applyAuditedUpdate } = require('../audit');
 const { num } = require('../storeMath');
 const { formatBoth, isValidDateKey, centralDateKey } = require('../time');
@@ -121,6 +121,42 @@ router.get('/employees', async (req, res, next) => {
     }
     res.json({ employees: out });
   } catch (e) { next(e); }
+});
+
+// ---------- Manager creates EMPLOYEES for their own stores ----------
+router.post('/employees', async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    if (req.user.role !== 'manager') return res.status(403).json({ error: 'Managers only' });
+    const { username, password, storeIds } = req.body || {};
+    if (!validUsername(username)) return res.status(400).json({ error: 'Username: 2-40 chars, letters/numbers/_.- only' });
+    if (!validPassword(password)) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters, letters and numbers only' });
+    }
+    // New employee must be assigned to at least one of the manager's stores, nothing else
+    const myIds = await accessibleStoreIds(req.user);
+    const ids = Array.isArray(storeIds) ? storeIds.map(Number).filter(Number.isInteger) : [];
+    if (!ids.length || !ids.every((id) => myIds.includes(id))) {
+      return res.status(403).json({ error: 'Assign at least one of your stores' });
+    }
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'INSERT INTO users (username, password_hash, role) VALUES ($1,$2,$3) RETURNING id, username, role, created_at',
+      [String(username).trim(), await hashPassword(password), 'employee']
+    );
+    const user = rows[0];
+    for (const sid of ids) {
+      await client.query('INSERT INTO user_stores (user_id, store_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [user.id, sid]);
+    }
+    await client.query('COMMIT');
+    res.status(201).json({ user: { ...user, stores: await getUserStores(user.id) } });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    if (e.code === '23505') return res.status(409).json({ error: 'Username already exists' });
+    next(e);
+  } finally {
+    client.release();
+  }
 });
 
 // ---------- Manager resets EMPLOYEE passwords only ----------
