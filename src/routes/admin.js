@@ -165,6 +165,7 @@ router.get('/alerts', async (req, res, next) => {
     const { rows } = await pool.query(
       `SELECT a.*, u.username AS edited_by_username, u.role AS edited_by_role
        FROM edit_audit a JOIN users u ON u.id = a.edited_by
+       WHERE a.resolved_at IS NULL
        ORDER BY a.edited_at DESC LIMIT 200`
     );
     const moneyFields = new Set(['in_amount', 'out_amount', 'net_amount', 'amount']);
@@ -185,6 +186,20 @@ router.get('/alerts', async (req, res, next) => {
       };
     });
     res.json({ alerts });
+  } catch (e) { next(e); }
+});
+
+// POST /api/admin/alerts/:id/resolve — mark an alert resolved (admin only).
+// Resolved alerts disappear from the Alerts tab but stay in the Edit Log.
+router.post('/alerts/:id/resolve', async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ error: 'Invalid alert id' });
+    await pool.query(
+      `UPDATE edit_audit SET resolved_at = NOW(), resolved_by = $1 WHERE id = $2`,
+      [req.session.userId, id]
+    );
+    res.json({ ok: true });
   } catch (e) { next(e); }
 });
 

@@ -111,3 +111,6 @@ CREATE TABLE IF NOT EXISTS edit_audit (
   edited_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_edit_audit_edited_at ON edit_audit(edited_at DESC);
+-- Resolved flag for admin alerts (added later; safe on existing DBs)
+ALTER TABLE edit_audit ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
+ALTER TABLE edit_audit ADD COLUMN IF NOT EXISTS resolved_by INT REFERENCES users(id);

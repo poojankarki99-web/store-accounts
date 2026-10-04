@@ -636,10 +636,18 @@ async function tabAlerts(body) {
   try {
     const { alerts } = await api('GET', '/api/admin/alerts');
     $('#al_list').innerHTML = alerts.map((a) => `
-      <div class="alert ${a.severity}">${esc(a.text)}
+      <div class="alert ${a.severity}" id="alert-${a.id}">${esc(a.text)}
         <div class="stamp-sm">${esc(a.timestamps.central.datetime)} Central · ${esc(a.timestamps.nepal.datetime)} Nepal</div>
+        <button class="btn secondary small" onclick="resolveAlert(${a.id})">Resolved</button>
       </div>`).join('') || '<div class="muted">No edits yet.</div>';
   } catch (e) { $('#al_list').innerHTML = `<div class="error">${esc(e.message)}</div>`; }
+}
+async function resolveAlert(id) {
+  try {
+    await api('POST', '/api/admin/alerts/' + id + '/resolve', {});
+    const el = document.getElementById('alert-' + id);
+    if (el) el.remove();
+  } catch (e) { alert(e.message); }
 }
 
 /* ---------- Edit log tab (admin) ---------- */
