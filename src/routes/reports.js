@@ -49,9 +49,10 @@ router.get('/dashboard', async (req, res, next) => {
 
     // Customer Out rows (count as expenses in net)
     const cpQ = await pool.query(
-      `SELECT cp.*, re.entry_date, re.store_id, s.name AS store_name FROM customer_payouts cp
+      `SELECT cp.*, re.entry_date, re.store_id, re.created_at, s.name AS store_name, u.username FROM customer_payouts cp
        JOIN report_entries re ON re.id = cp.report_entry_id
        JOIN stores s ON s.id = re.store_id
+       JOIN users u ON u.id = re.user_id
        WHERE re.store_id = ANY($1) AND re.entry_date >= $2 AND re.entry_date <= $3
        ORDER BY re.entry_date DESC`, [ids, from, to]);
 
@@ -114,7 +115,7 @@ router.get('/dashboard', async (req, res, next) => {
       netProfit,
       withdrawnToday, // null when no entries that day
       expenses: exQ.rows.map(stamp),
-      customerPayouts: cpQ.rows,
+      customerPayouts: cpQ.rows.map(stamp),
     });
   } catch (e) { next(e); }
 });

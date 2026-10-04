@@ -330,7 +330,8 @@ async function tabReports(body) {
       </div>`).join('') || '<div class="muted">No payouts in range.</div>';
 
     const custPayoutRows = (d.customerPayouts || []).map((c) => `
-      <div class="item"><b>${money(c.amount)}</b> · ${esc(c.customer_name)} · <span class="stamp-sm">${esc(c.game_name)}</span>
+      <div class="item">${stampHtml(c.created_at, c.username)}
+        <div><b>${money(c.amount)}</b> · ${esc(c.customer_name)} · <span class="stamp-sm">${esc(c.game_name)}</span></div>
         <div class="meta">${esc(c.store_name || '')}</div>
       </div>`).join('') || '<div class="muted">No customer payouts in range.</div>';
 
