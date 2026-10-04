@@ -35,11 +35,33 @@ function fmtBoth(iso) {
   return { central: f('America/Chicago'), nepal: f('Asia/Kathmandu') };
 }
 
-// Bold uppercase stamp: DATE TIME — EMPLOYEE NAME, plus Nepal time below
+// Timezone view: admin toggles central/nepal; manager sees nepal-primary + central;
+// employee sees nepal only.
+function tzView() {
+  if (!S.user) return 'central';
+  if (S.user.role === 'admin') return S.tz || 'central';
+  if (S.user.role === 'manager') return 'nepal-both';
+  return 'nepal';
+}
+function tzLabel() {
+  const v = tzView();
+  return (v === 'nepal' || v === 'nepal-both') ? 'Nepal Time' : 'Central Time';
+}
+// Bold uppercase stamp: DATE TIME — EMPLOYEE NAME, second timezone below when applicable
 function stampHtml(iso, username) {
   const t = fmtBoth(iso);
-  return `<div class="stamp">${esc(t.central)} — ${esc(username || '')}</div>
-          <div class="stamp-sm">Nepal: ${esc(t.nepal)}</div>`;
+  const v = tzView();
+  const primary = (v === 'nepal' || v === 'nepal-both') ? t.nepal : t.central;
+  let html = `<div class="stamp">${esc(primary)} — ${esc(username || '')}</div>`;
+  if (v === 'both') html += `<div class="stamp-sm">Nepal: ${esc(t.nepal)}</div>`;
+  if (v === 'nepal-both') html += `<div class="stamp-sm">Central: ${esc(t.central)}</div>`;
+  return html;
+}
+// Single-line timestamp for alerts/audit, following the viewer's timezone
+function tzStampLine(ts) {
+  const v = tzView();
+  if (v === 'nepal' || v === 'nepal-both') return `${esc(ts.nepal.datetime)} Nepal`;
+  return `${esc(ts.central.datetime)} Central`;
 }
 
 function topbar() {
@@ -347,6 +369,10 @@ async function tabReports(body) {
       <button class="btn ${mode === 'today' ? '' : 'secondary'}" onclick="todayRange()">Today</button>
       <button class="btn ${mode === 'month' ? '' : 'secondary'}" onclick="clearRange()">This Month</button>
       <button class="btn ${mode === 'all' ? '' : 'secondary'}" onclick="allTime()">All Time</button>
+      ${S.user.role === 'admin' ? `<div class="row2" style="margin-top:8px">
+        <button class="btn ${tzView() === 'central' ? '' : 'secondary'}" onclick="S.tz='central';render()">Central Time</button>
+        <button class="btn ${tzView() === 'nepal' ? '' : 'secondary'}" onclick="S.tz='nepal';render()">Nepal Time</button>
+      </div>` : ''}
       <div class="muted" style="margin-top:8px">Net Profit defaults to the entire month. All Time shows the current year.</div>
     </div>
     <div class="card"><h2>Net Profit</h2>
@@ -433,7 +459,7 @@ async function tabHolding(body) {
         <span class="v ${m.holdingBalance < 0 ? 'neg' : 'pos'}">${money(m.holdingBalance)}</span></div>
       <div class="figure"><span class="k">Total Withdrawn Amount (${esc(m.period.label)})</span>
         <span class="v">${money(m.totalWithdrawn)}</span></div>
-      <div class="muted">Central Time</div>
+      <div class="muted">${tzLabel()}</div>
     </div>
     <div class="card"><h2>Payout Entries — ${esc(m.period.label)}</h2>${payoutDetailHtml(m, canCut)}</div>
     <div class="card"><h2>Report With Details</h2>
@@ -464,7 +490,7 @@ async function tabHolding(body) {
           <span class="v ${r.holdingBalance < 0 ? 'neg' : 'pos'}">${money(r.holdingBalance)}</span></div>
         <div class="figure"><span class="k">Total Withdrawn Amount (${esc(r.period.label)})</span>
           <span class="v">${money(r.totalWithdrawn)}</span></div>
-        <div class="muted">Central Time</div>
+        <div class="muted">${tzLabel()}</div>
       </div>
       <div class="card"><h2>Payout Entries — ${esc(r.period.label)}</h2>${payoutDetailHtml(r, canCut)}</div>
       <div class="card"><h2>Report Entries — ${esc(r.period.label)}</h2>${entryRowsHtml(r)}</div>`;
@@ -601,7 +627,7 @@ async function tabCih(body) {
       <button class="btn" onclick="CIHmonth=$('#cih_month').value;render()">Show</button>
       <div class="figure" style="margin-top:12px"><span class="k">Money Made (${esc(d.month)})</span>
         <span class="v ${d.moneyMade < 0 ? 'neg' : 'pos'}">${money(d.moneyMade)}</span></div>
-      <div class="muted">Withdrawn ${money(d.withdrawn)} − Expenses ${money(d.expenseTotal)} · Central Time</div>
+      <div class="muted">Withdrawn ${money(d.withdrawn)} − Expenses ${money(d.expenseTotal)} · ${tzLabel()}</div>
       ${d.perStore ? `<div class="section-title">Per Store</div>${perStoreHtml}` : ''}
     </div>
     <div class="card"><h2>Expenses — ${esc(d.month)}</h2>${expenseHtml}</div>`;
@@ -741,7 +767,7 @@ async function tabAlerts(body) {
     const { alerts } = await api('GET', '/api/admin/alerts');
     $('#al_list').innerHTML = alerts.map((a) => `
       <div class="alert ${a.severity}" id="alert-${a.id}">${esc(a.text)}
-        <div class="stamp-sm">${esc(a.timestamps.central.datetime)} Central · ${esc(a.timestamps.nepal.datetime)} Nepal</div>
+        <div class="stamp-sm">${tzStampLine(a.timestamps)}</div>
         <button class="btn secondary small" onclick="resolveAlert(${a.id})">Resolved</button>
       </div>`).join('') || '<div class="muted">No edits yet.</div>';
   } catch (e) { $('#al_list').innerHTML = `<div class="error">${esc(e.message)}</div>`; }
@@ -763,7 +789,7 @@ async function tabAudit(body) {
       <div class="audit-row">
         <div><b>${esc(a.edited_by_username)}</b> (${esc(a.edited_by_role)}) — <code>${esc(a.entry_type)} #${a.entry_id}</code> · <code>${esc(a.field_name)}</code></div>
         <div>${esc(a.old_value ?? '—')} → <b>${esc(a.new_value ?? '—')}</b></div>
-        <div class="stamp-sm">${esc(a.timestamps.central.datetime)} Central · ${esc(a.timestamps.nepal.datetime)} Nepal</div>
+        <div class="stamp-sm">${tzStampLine(a.timestamps)}</div>
       </div>`).join('') || '<div class="muted">No edits yet.</div>';
   } catch (e) { $('#au_list').innerHTML = `<div class="error">${esc(e.message)}</div>`; }
 }
