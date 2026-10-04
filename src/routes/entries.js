@@ -19,13 +19,11 @@ function cleanStr(v, max = 200) {
 router.post('/report', requireStoreAccess, async (req, res, next) => {
   const client = await pool.connect();
   try {
-    const { hours, minutes, inAmount, outAmount, customerPayouts } = req.body || {};
+    const { hours, minutes, inAmount, customerPayouts } = req.body || {};
     const h = Math.max(0, Math.min(24, parseInt(hours, 10) || 0));
     const m = Math.max(0, Math.min(59, parseInt(minutes, 10) || 0));
     const inA = num(inAmount);
-    const outA = num(outAmount);
-    if (inA < 0 || outA < 0) return res.status(400).json({ error: 'Amounts cannot be negative' });
-    const net = Math.round((inA - outA) * 100) / 100;
+    if (inA < 0) return res.status(400).json({ error: 'Amounts cannot be negative' });
 
     const rows = Array.isArray(customerPayouts) ? customerPayouts : [];
     for (const r of rows) {
@@ -34,12 +32,15 @@ router.post('/report', requireStoreAccess, async (req, res, next) => {
       }
       if (num(r.amount) < 0) return res.status(400).json({ error: 'Amounts cannot be negative' });
     }
+    // Net = IN minus Customer Payouts (the generic "Out" field is retired)
+    const custTotal = Math.round(rows.reduce((s, r) => s + num(r.amount), 0) * 100) / 100;
+    const net = Math.round((inA - custTotal) * 100) / 100;
 
     await client.query('BEGIN');
     const { rows: er } = await client.query(
       `INSERT INTO report_entries (store_id, user_id, hours_worked_minutes, in_amount, out_amount, net_amount, entry_date)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [req.storeId, req.user.id, h * 60 + m, inA, outA, net, centralDateKey()]
+       VALUES ($1,$2,$3,$4,0,$5,$6) RETURNING *`,
+      [req.storeId, req.user.id, h * 60 + m, inA, net, centralDateKey()]
     );
     const entry = er[0];
     for (const r of rows) {
@@ -114,11 +115,12 @@ router.put('/report/:id', canEdit, async (req, res, next) => {
     }
     const changes = {};
     if (req.body.inAmount !== undefined) changes.in_amount = num(req.body.inAmount);
-    if (req.body.outAmount !== undefined) changes.out_amount = num(req.body.outAmount);
     if (req.body.hoursWorkedMinutes !== undefined) changes.hours_worked_minutes = Math.max(0, parseInt(req.body.hoursWorkedMinutes, 10) || 0);
     const newIn = changes.in_amount !== undefined ? changes.in_amount : num(cur.in_amount);
-    const newOut = changes.out_amount !== undefined ? changes.out_amount : num(cur.out_amount);
-    changes.net_amount = Math.round((newIn - newOut) * 100) / 100;
+    // Net = IN minus this entry's Customer Payouts (generic "Out" is retired)
+    const { rows: cpSum } = await pool.query(
+      'SELECT COALESCE(SUM(amount),0) AS t FROM customer_payouts WHERE report_entry_id = $1', [cur.id]);
+    changes.net_amount = Math.round((newIn - num(cpSum[0].t)) * 100) / 100;
     const r = await applyAuditedUpdate({
       table: 'report_entries', id: cur.id, entryType: 'report_entry',
       changes, current: cur, editedBy: req.user.id,

@@ -77,13 +77,11 @@ router.get('/dashboard', async (req, res, next) => {
        ORDER BY e.expense_date DESC`, [ids, from, to]);
 
     const inTotal = num(inQ.rows.reduce((s, r) => s + Number(r.in_amount), 0));
-    const outTotal = num(inQ.rows.reduce((s, r) => s + Number(r.out_amount), 0));
     const custPayoutTotal = num(cpQ.rows.reduce((s, r) => s + Number(r.amount), 0));
     const expenseTotal = num(exQ.rows.reduce((s, r) => s + Number(r.amount), 0));
-    const expenseGrand = Math.round((outTotal + custPayoutTotal + expenseTotal) * 100) / 100;
-    // Net Profit is strictly IN minus OUT (matches each entry's Net). Customer payouts
-    // and manager expenses are shown as breakdown lines only, never deducted.
-    const netProfit = Math.round((inTotal - outTotal) * 100) / 100;
+    // Net Profit is strictly IN minus Customer Payouts (the generic "Out" is retired).
+    // Manager expenses are shown as breakdown lines only, never deducted.
+    const netProfit = Math.round((inTotal - custPayoutTotal) * 100) / 100;
     const withdrawnTotal = num(prRows.reduce((s, r) => s + Number(r.amount), 0));
 
     // "Withdrawn Balance for the day": only when entries exist that day
@@ -112,7 +110,7 @@ router.get('/dashboard', async (req, res, next) => {
           })),
         },
       },
-      outBreakdown: { outTotal, customerPayoutTotal: custPayoutTotal, expenseTotal, expenseGrand },
+      outBreakdown: { customerPayoutTotal: custPayoutTotal, expenseTotal },
       netProfit,
       withdrawnToday, // null when no entries that day
       expenses: exQ.rows.map(stamp),
@@ -146,15 +144,20 @@ router.get('/holding', async (req, res, next) => {
       start = r.start; end = r.end; label = r.monthLabel;
     }
 
-    // Period net profit (Holding Balance main figure): strictly IN minus OUT.
-    // Customer payouts and manager expenses are tracked separately, never deducted.
+    // Period net profit (Holding Balance main figure): strictly IN minus Customer Payouts.
+    // The generic "Out" is retired; manager expenses are tracked separately, never deducted.
     const rep = await pool.query(
-      `SELECT COALESCE(SUM(in_amount),0) AS it, COALESCE(SUM(out_amount),0) AS ot
+      `SELECT COALESCE(SUM(in_amount),0) AS it
        FROM report_entries WHERE store_id = $1 AND entry_date >= $2 AND entry_date <= $3`,
       [storeId, start, end]);
+    const cp = await pool.query(
+      `SELECT COALESCE(SUM(cp.amount),0) AS t FROM customer_payouts cp
+       JOIN report_entries re ON re.id = cp.report_entry_id
+       WHERE re.store_id = $1 AND re.entry_date >= $2 AND re.entry_date <= $3`,
+      [storeId, start, end]);
     const periodIn = num(rep.rows[0].it);
-    const periodOut = num(rep.rows[0].ot);
-    const holdingBalance = Math.round((periodIn - periodOut) * 100) / 100;
+    const periodCustPayout = num(cp.rows[0].t);
+    const holdingBalance = Math.round((periodIn - periodCustPayout) * 100) / 100;
 
     // Total withdrawn for the period (top, below net profit — no names)
     const wd = await pool.query(
@@ -198,7 +201,7 @@ router.get('/holding', async (req, res, next) => {
       totalWithdrawn,          // withdrawn for the period
       details,                 // payout entries w/ rows + hand balance
       entries: periodEntries.rows.map(stamp),
-      periodIn, periodOut,
+      periodIn, periodCustPayout,
     });
   } catch (e) { next(e); }
 });

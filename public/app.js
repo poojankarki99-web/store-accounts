@@ -154,8 +154,7 @@ function reportEntryForm() {
     <div class="row2"><select id="f_hours">${hours}</select><select id="f_mins">${mins}</select></div>
     <div class="row2"><div><label>Hours</label></div><div><label>Minutes</label></div></div>
     <label>IN</label><input id="f_in" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00">
-    <label>Out</label><input id="f_out" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00">
-    <div class="figure"><span class="k">Net (IN − Out)</span><span class="v" id="f_net">0.00</span></div>
+    <div class="figure"><span class="k">Net (IN − Customer Payout)</span><span class="v" id="f_net">0.00</span></div>
     <div class="section-title">Customer Out</div>
     <div id="custRows"></div>
     <button class="btn secondary" onclick="addCustRow()">+ Add More</button>
@@ -176,11 +175,13 @@ function addCustRow() { $('#custRows').insertAdjacentHTML('beforeend', custRowHt
 function initReportForm() {
   const box = $('#custRows'); box.innerHTML = custRowHtml() + custRowHtml();
   const upd = () => {
-    const net = (parseFloat($('#f_in').value) || 0) - (parseFloat($('#f_out').value) || 0);
+    const custTotal = [...document.querySelectorAll('#custRows .c_amt')]
+      .reduce((s, el) => s + (parseFloat(el.value) || 0), 0);
+    const net = (parseFloat($('#f_in').value) || 0) - custTotal;
     $('#f_net').textContent = money(net);
   };
   $('#f_in').addEventListener('input', upd);
-  $('#f_out').addEventListener('input', upd);
+  box.addEventListener('input', upd);
 }
 
 async function submitReport() {
@@ -192,7 +193,7 @@ async function submitReport() {
     await api('POST', '/api/entries/report', {
       storeId: $('#f_store').value,
       hours: $('#f_hours').value, minutes: $('#f_mins').value,
-      inAmount: $('#f_in').value, outAmount: $('#f_out').value,
+      inAmount: $('#f_in').value,
       customerPayouts: rows,
     });
     S.view = 'home'; render();
@@ -319,7 +320,7 @@ async function tabReports(body) {
 
     const inRows = incomeExpense.inSection.entries.map((e) => `
       <div class="item">${stampHtml(e.created_at, e.username)}
-        <div>IN: <b>${money(e.in_amount)}</b> · Out: <b>${money(e.out_amount)}</b> · Net: <b>${money(e.net_amount)}</b></div>
+        <div>IN: <b>${money(e.in_amount)}</b> · Net: <b>${money(e.net_amount)}</b></div>
         <div class="meta">Hours worked: ${Math.floor(e.hours_worked_minutes / 60)}h ${e.hours_worked_minutes % 60}m · ${esc(e.store_name || '')}</div>
       </div>`).join('') || '<div class="muted">No IN entries in range.</div>';
 
@@ -328,11 +329,10 @@ async function tabReports(body) {
         ${pe.rows.map((r) => `<div>${esc(r.name)} · <span class="stamp-sm">${esc(r.tag_email)}</span> · <b>${money(r.amount)}</b></div>`).join('')}
       </div>`).join('') || '<div class="muted">No payouts in range.</div>';
 
-    const outRows = incomeExpense.inSection.entries.map((e) => `
-      <div class="item">${stampHtml(e.created_at, e.username)}
-        <div>Out: <b>${money(e.out_amount)}</b></div>
-        <div class="meta">${esc(e.store_name || '')}</div>
-      </div>`).join('') || '<div class="muted">No out entries in range.</div>';
+    const custPayoutRows = (d.customerPayouts || []).map((c) => `
+      <div class="item"><b>${money(c.amount)}</b> · ${esc(c.customer_name)} · <span class="stamp-sm">${esc(c.game_name)}</span>
+        <div class="meta">${esc(c.store_name || '')}</div>
+      </div>`).join('') || '<div class="muted">No customer payouts in range.</div>';
 
     body.innerHTML = storeBarHtml() + `
     <div class="card"><h2>Reports</h2>
@@ -341,6 +341,7 @@ async function tabReports(body) {
         <div><label>To</label><input type="date" id="r_to" value="${esc(range.to)}"></div>
       </div>
       <button class="btn" onclick="applyRange()">Apply Dates</button>
+      <button class="btn secondary" onclick="todayRange()">Today</button>
       <button class="btn secondary" onclick="clearRange()">This Month</button>
       <button class="btn secondary" onclick="allTime()">All Time</button>
       <div class="muted" style="margin-top:8px">Net Profit defaults to the entire month. All Time shows the current year.</div>
@@ -354,15 +355,14 @@ async function tabReports(body) {
       <div class="figure"><span class="k">Total IN</span><span class="v pos">${money(incomeExpense.inSection.total)}</span></div>
       ${inRows}
       <hr class="divider">
-      <div class="section-title">Out (Register)</div>
-      <div class="figure"><span class="k">Total Out</span><span class="v">${money(outBreakdown.outTotal)}</span></div>
-      ${outRows}
+      <div class="section-title">Customer Payout</div>
+      <div class="figure"><span class="k">Total Customer Payout</span><span class="v">${money(outBreakdown.customerPayoutTotal)}</span></div>
+      ${custPayoutRows}
       <hr class="divider">
       <div class="section-title">Payout</div>
       <div class="figure"><span class="k">Total Payout</span><span class="v">${money(incomeExpense.payoutSection.total)}</span></div>
       ${payoutRows}
       <hr class="divider">
-      <div class="figure"><span class="k">Customer payouts</span><span class="v">${money(outBreakdown.customerPayoutTotal)}</span></div>
       <div class="figure"><span class="k">Manager expenses</span><span class="v">${money(outBreakdown.expenseTotal)}</span></div>
     </div>
     ${withdrawnToday ? `<div class="card"><h2>Withdrawn Balance for the Day</h2>
@@ -379,6 +379,12 @@ async function tabReports(body) {
 }
 function applyRange() { S.from = $('#r_from').value; S.to = $('#r_to').value; render(); }
 function clearRange() { S.from = ''; S.to = ''; render(); }
+// "Today" shows only today's report (Central Time).
+function todayRange() {
+  const t = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  S.from = t; S.to = t;
+  render();
+}
 // "All Time" shows the yearly report only: current Central calendar year.
 function allTime() {
   const y = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric' }).format(new Date());
@@ -485,7 +491,7 @@ function withdrawnDetailHtml(d) {
 function entryRowsHtml(d) {
   return d.entries.map((e) => `
     <div class="item">${stampHtml(e.created_at, e.username)}
-      <div>IN: <b>${money(e.in_amount)}</b> · Out: <b>${money(e.out_amount)}</b> · Net: <b>${money(e.net_amount)}</b></div>
+      <div>IN: <b>${money(e.in_amount)}</b> · Net: <b>${money(e.net_amount)}</b></div>
     </div>`).join('') || '<div class="muted">No entries in this period.</div>';
 }
 async function saveCut(peId) {

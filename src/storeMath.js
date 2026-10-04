@@ -7,8 +7,8 @@ function num(v) {
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
 }
 
-// Store totals. Net = IN - OUT, strictly. Manager expenses and customer payouts are
-// tracked separately and NEVER deducted. Withdrawn (payouts) is NEVER subtracted.
+// Store totals. Net = IN - Customer Payouts, strictly. The generic "Out" is retired.
+// Manager expenses are tracked separately and NEVER deducted. Withdrawn (payouts) is NEVER subtracted.
 async function storeTotals(storeId, fromDate = null, toDate = null) {
   const dateFilter = (col) => {
     const conds = [];
@@ -17,8 +17,12 @@ async function storeTotals(storeId, fromDate = null, toDate = null) {
     return conds.length ? 'AND ' + conds.join(' AND ') : '';
   };
   const rep = await pool.query(
-    `SELECT COALESCE(SUM(in_amount),0) AS in_total, COALESCE(SUM(out_amount),0) AS out_total
+    `SELECT COALESCE(SUM(in_amount),0) AS in_total
      FROM report_entries WHERE store_id = $1 ${dateFilter('entry_date')}`, [storeId]);
+  const cp = await pool.query(
+    `SELECT COALESCE(SUM(cp.amount),0) AS t FROM customer_payouts cp
+     JOIN report_entries re ON re.id = cp.report_entry_id
+     WHERE re.store_id = $1 ${dateFilter('re.entry_date')}`, [storeId]);
   const exp = await pool.query(
     `SELECT COALESCE(SUM(amount),0) AS expense_total
      FROM manager_expenses WHERE store_id = $1 ${dateFilter('expense_date')}`, [storeId]);
@@ -27,10 +31,10 @@ async function storeTotals(storeId, fromDate = null, toDate = null) {
      FROM payout_rows pr JOIN payout_entries pe ON pe.id = pr.payout_entry_id
      WHERE pe.store_id = $1 ${dateFilter('pe.entry_date')}`, [storeId]);
   const inTotal = num(rep.rows[0].in_total);
-  const outTotal = num(rep.rows[0].out_total);
+  const customerPayoutTotal = num(cp.rows[0].t);
   const expenseTotal = num(exp.rows[0].expense_total);
   const withdrawnTotal = num(pay.rows[0].withdrawn_total);
-  return { inTotal, outTotal, expenseTotal, withdrawnTotal, net: Math.round((inTotal - outTotal) * 100) / 100 };
+  return { inTotal, customerPayoutTotal, expenseTotal, withdrawnTotal, net: Math.round((inTotal - customerPayoutTotal) * 100) / 100 };
 }
 
 module.exports = { num, storeTotals };
