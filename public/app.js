@@ -378,15 +378,31 @@ function allTime() {
 }
 
 /* ---------- Holding tab (single store only) ---------- */
-let Hdate = '';
+let Hmode = 'month'; // 'month' | 'range'
+let Hmonth = '';     // YYYY-MM ('' = current Central month)
+let Hstart = '', Hend = '';
 async function tabHolding(body) {
   body.innerHTML = storeBarHtml() + `<div class="card"><h2>Holding Balance</h2><div class="muted">Loading…</div></div>`;
   try {
-    const q = new URLSearchParams({ store: S.selected });
-    if (Hdate) q.set('date', Hdate);
+    const q = new URLSearchParams({ store: S.selected, mode: Hmode });
+    if (Hmode === 'month' && Hmonth) q.set('month', Hmonth);
+    if (Hmode === 'range') { if (Hstart) q.set('start', Hstart); if (Hend) q.set('end', Hend); }
     const d = await api('GET', '/api/reports/holding?' + q.toString());
-    Hdate = d.date;
+    if (d.mode === 'month') Hmonth = d.period.month || '';
+    if (d.mode === 'range') { Hstart = d.period.start; Hend = d.period.end; }
     const canCut = S.user.role === 'manager';
+
+    const modeTabs = `<div class="row2" style="margin-bottom:10px">
+      <button class="btn ${d.mode === 'month' ? '' : 'secondary'}" onclick="Hmode='month';render()">This Month</button>
+      <button class="btn ${d.mode === 'range' ? '' : 'secondary'}" onclick="Hmode='range';render()">Date Range</button></div>`;
+
+    const periodPicker = d.mode === 'month'
+      ? `<div class="row2"><input type="month" id="h_month" value="${esc(d.period.month)}">
+         <button class="btn small" onclick="Hmonth=$('#h_month').value;render()">Show</button>
+         <button class="btn small secondary" onclick="Hmonth='';render()">This Month</button></div>`
+      : `<div class="row2"><div><label>Start Date</label><input type="date" id="h_start" value="${esc(d.period.start)}"></div>
+         <div><label>End Date</label><input type="date" id="h_end" value="${esc(d.period.end)}"></div></div>
+         <button class="btn" onclick="Hstart=$('#h_start').value;Hend=$('#h_end').value;render()">Show Range</button>`;
 
     const detailHtml = d.details.map((pe) => `
       <div class="item">${stampHtml(pe.created_at, pe.username)}
@@ -397,33 +413,32 @@ async function tabHolding(body) {
           : `<div class="muted">No partner percent entered yet.</div>`}
         ${canCut ? `<div class="row2" style="margin-top:6px"><input type="number" id="cut_${pe.id}" min="0" max="100" step="0.01" placeholder="% cut" value="${pe.partnerPercent ?? ''}">
           <button class="btn small" onclick="saveCut(${pe.id})">Save %</button></div>` : ''}
-      </div>`).join('') || '<div class="muted">No payout entries this day.</div>';
+      </div>`).join('') || '<div class="muted">No payout entries in this period.</div>';
 
     const bottomDetails = d.details.map((pe) => `
       <div class="item"><b>${money(pe.entryTotal)}</b>
         ${pe.rows.map((r) => `<div class="stamp-sm">${esc(r.name)} · ${esc(r.tag_email)} · ${money(r.amount)}</div>`).join('')}
       </div>`).join('');
 
-    const monthRows = d.monthReport.entries.map((e) => `
+    const entryRows = d.entries.map((e) => `
       <div class="item">${stampHtml(e.created_at, e.username)}
         <div>IN: <b>${money(e.in_amount)}</b> · Out: <b>${money(e.out_amount)}</b> · Net: <b>${money(e.net_amount)}</b></div>
-      </div>`).join('') || '<div class="muted">No entries this month.</div>';
+      </div>`).join('') || '<div class="muted">No entries in this period.</div>';
 
     body.innerHTML = storeBarHtml() + `
     <div class="card"><h2>Holding Balance — ${esc(storeName(S.selected))}</h2>
-      <label>Select Date</label><input type="date" id="h_date" value="${esc(d.date)}">
-      <button class="btn" onclick="Hdate=$('#h_date').value;render()">Show Day</button>
-      <div class="figure" style="margin-top:12px"><span class="k">Holding Balance (month to date)</span>
+      ${modeTabs}${periodPicker}
+      <div class="figure" style="margin-top:12px"><span class="k">Holding Balance (${esc(d.period.label)})</span>
         <span class="v ${d.holdingBalance < 0 ? 'neg' : 'pos'}">${money(d.holdingBalance)}</span></div>
-      <div class="figure"><span class="k">Total Withdrawn Amount (${esc(d.date)})</span>
-        <span class="v">${money(d.totalWithdrawnDay)}</span></div>
-      <div class="muted">Month: ${esc(d.month.monthLabel)} · Central Time</div>
+      <div class="figure"><span class="k">Total Withdrawn Amount (${esc(d.period.label)})</span>
+        <span class="v">${money(d.totalWithdrawn)}</span></div>
+      <div class="muted">Central Time</div>
     </div>
-    <div class="card"><h2>Payout Entries — ${esc(d.date)}</h2>${detailHtml}</div>
+    <div class="card"><h2>Payout Entries — ${esc(d.period.label)}</h2>${detailHtml}</div>
     <div class="card"><h2>Report With Details</h2>
       <div class="section-title">With Drawn Amount</div>${bottomDetails || '<div class="muted">None.</div>'}
     </div>
-    <div class="card"><h2>Full Month Report — ${esc(d.month.monthLabel)}</h2>${monthRows}</div>`;
+    <div class="card"><h2>Report Entries — ${esc(d.period.label)}</h2>${entryRows}</div>`;
   } catch (e) {
     body.innerHTML = storeBarHtml() + `<div class="card"><div class="error">${esc(e.message)}</div></div>`;
   }

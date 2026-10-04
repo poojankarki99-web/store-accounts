@@ -119,8 +119,9 @@ router.get('/dashboard', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// GET /api/reports/holding?store=<id>&date=<YYYY-MM-DD>
-// Single store only. Main figure = current month's net profit (Central month).
+// GET /api/reports/holding?store=<id>&mode=month|range&month=YYYY-MM&start=YYYY-MM-DD&end=YYYY-MM-DD
+// Single store only. Main figure = net profit for the chosen period (Central).
+// mode=month: whole Central month (defaults to current month). mode=range: exact start/end dates.
 router.get('/holding', async (req, res, next) => {
   try {
     const raw = req.query.store;
@@ -128,38 +129,50 @@ router.get('/holding', async (req, res, next) => {
     const storeId = Number(raw);
     if (!ids.includes(storeId)) return res.status(403).json({ error: 'Select a single store for Holding Balance' });
 
-    const date = req.query.date && isValidDateKey(req.query.date) ? req.query.date : centralDateKey();
-    const m = centralMonthRange(new Date(date + 'T12:00:00Z'));
+    const mode = req.query.mode === 'range' ? 'range' : 'month';
+    const currentMonth = centralMonthRange().monthLabel;
+    let start, end, label, monthKey = null;
+    if (mode === 'range') {
+      const s = req.query.start, e = req.query.end;
+      if (!isValidDateKey(s) || !isValidDateKey(e) || s > e) {
+        return res.status(400).json({ error: 'Pick a valid start and end date' });
+      }
+      start = s; end = e; label = `${s} → ${e}`;
+    } else {
+      monthKey = isValidMonthKey(req.query.month) ? req.query.month : currentMonth;
+      const r = monthRangeFromKey(monthKey);
+      start = r.start; end = r.end; label = r.monthLabel;
+    }
 
-    // Month net profit (Holding Balance main figure)
+    // Period net profit (Holding Balance main figure)
     const rep = await pool.query(
       `SELECT COALESCE(SUM(in_amount),0) AS it, COALESCE(SUM(out_amount),0) AS ot
        FROM report_entries WHERE store_id = $1 AND entry_date >= $2 AND entry_date <= $3`,
-      [storeId, m.start, m.end]);
+      [storeId, start, end]);
     const cp = await pool.query(
       `SELECT COALESCE(SUM(cp.amount),0) AS t FROM customer_payouts cp
        JOIN report_entries re ON re.id = cp.report_entry_id
        WHERE re.store_id = $1 AND re.entry_date >= $2 AND re.entry_date <= $3`,
-      [storeId, m.start, m.end]);
+      [storeId, start, end]);
     const ex = await pool.query(
       `SELECT COALESCE(SUM(amount),0) AS t FROM manager_expenses
        WHERE store_id = $1 AND expense_date >= $2 AND expense_date <= $3`,
-      [storeId, m.start, m.end]);
-    const monthIn = num(rep.rows[0].it);
-    const monthOut = num(rep.rows[0].ot) + num(cp.rows[0].t) + num(ex.rows[0].t);
-    const holdingBalance = Math.round((monthIn - monthOut) * 100) / 100;
+      [storeId, start, end]);
+    const periodIn = num(rep.rows[0].it);
+    const periodOut = num(rep.rows[0].ot) + num(cp.rows[0].t) + num(ex.rows[0].t);
+    const holdingBalance = Math.round((periodIn - periodOut) * 100) / 100;
 
-    // Total withdrawn for THAT DAY only (top, below net profit — no names)
+    // Total withdrawn for the period (top, below net profit — no names)
     const wd = await pool.query(
       `SELECT COALESCE(SUM(pr.amount),0) AS t FROM payout_rows pr
        JOIN payout_entries pe ON pe.id = pr.payout_entry_id
-       WHERE pe.store_id = $1 AND pe.entry_date = $2`, [storeId, date]);
-    const totalWithdrawnDay = num(wd.rows[0].t);
+       WHERE pe.store_id = $1 AND pe.entry_date >= $2 AND pe.entry_date <= $3`, [storeId, start, end]);
+    const totalWithdrawn = num(wd.rows[0].t);
 
-    // Payout entries for the day with rows + partner cut + hand balance
+    // Payout entries for the period with rows + partner cut + hand balance
     const { rows: pes } = await pool.query(
       `SELECT pe.*, u.username FROM payout_entries pe JOIN users u ON u.id = pe.user_id
-       WHERE pe.store_id = $1 AND pe.entry_date = $2 ORDER BY pe.id`, [storeId, date]);
+       WHERE pe.store_id = $1 AND pe.entry_date >= $2 AND pe.entry_date <= $3 ORDER BY pe.entry_date DESC, pe.id`, [storeId, start, end]);
     const details = [];
     for (const pe of pes) {
       const { rows: rowsQ } = await pool.query('SELECT * FROM payout_rows WHERE payout_entry_id = $1 ORDER BY id', [pe.id]);
@@ -176,23 +189,22 @@ router.get('/holding', async (req, res, next) => {
       });
     }
 
-    // Full month report summary
-    const monthEntries = await pool.query(
+    // Report entries for the period
+    const periodEntries = await pool.query(
       `SELECT re.*, u.username FROM report_entries re JOIN users u ON u.id = re.user_id
        WHERE re.store_id = $1 AND re.entry_date >= $2 AND re.entry_date <= $3 ORDER BY re.entry_date DESC`,
-      [storeId, m.start, m.end]);
+      [storeId, start, end]);
 
     res.json({
       storeId,
-      date,
-      month: m,
-      holdingBalance,          // entire month's net profit (Central month)
-      totalWithdrawnDay,       // top figure below net profit: total withdrawn THAT DAY only
-      details,                 // bottom "Report With details": rows with name/email + hand balance
-      monthReport: {
-        entries: monthEntries.rows.map(stamp),
-        monthIn, monthOut, net: holdingBalance,
-      },
+      mode,
+      period: { start, end, label, month: monthKey },
+      currentMonth,
+      holdingBalance,          // period net profit (Central period)
+      totalWithdrawn,          // withdrawn for the period
+      details,                 // payout entries w/ rows + hand balance
+      entries: periodEntries.rows.map(stamp),
+      periodIn, periodOut,
     });
   } catch (e) { next(e); }
 });
