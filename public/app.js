@@ -362,10 +362,9 @@ async function tabReports(body) {
     body.innerHTML = storeBarHtml() + `
     <div class="card"><h2>Reports</h2>
       <div class="cal-row">
-        <div><label>From</label><input type="date" id="r_from" value="${esc(range.from)}"></div>
-        <div><label>To</label><input type="date" id="r_to" value="${esc(range.to)}"></div>
+        <div><label>From</label><input type="date" id="r_from" value="${esc(range.from)}" onchange="applyRange()"></div>
+        <div><label>To</label><input type="date" id="r_to" value="${esc(range.to)}" onchange="applyRange()"></div>
       </div>
-      <button class="btn ${mode === 'custom' ? '' : 'secondary'}" onclick="applyRange()">Apply Dates</button>
       <button class="btn ${mode === 'today' ? '' : 'secondary'}" onclick="todayRange()">Today</button>
       <button class="btn ${mode === 'month' ? '' : 'secondary'}" onclick="clearRange()">This Month</button>
       <button class="btn ${mode === 'all' ? '' : 'secondary'}" onclick="allTime()">All Time</button>
