@@ -254,7 +254,6 @@ function tabsHtml() {
   const tabs = [
     ['reports', 'Reports'],
     ['holding', 'Holding'],
-    ['bank', 'Bank'],
     ['expenses', 'Expenses'],
     ['cih', 'CIH Report'],
     ['team', 'Team'],
@@ -299,7 +298,7 @@ function renderTab() {
       <button class="btn secondary" onclick="S.selected=null;render()">Choose Store</button></div>`;
     return;
   }
-  ({ reports: tabReports, holding: tabHolding, bank: tabBank, expenses: tabExpenses, cih: tabCih, team: tabTeam, alerts: tabAlerts, audit: tabAudit })[S.tab](body);
+  ({ reports: tabReports, holding: tabHolding, expenses: tabExpenses, cih: tabCih, team: tabTeam, alerts: tabAlerts, audit: tabAudit })[S.tab](body);
 }
 
 function storeBarHtml() {
@@ -316,7 +315,7 @@ async function tabReports(body) {
     if (S.from) q.set('from', S.from);
     if (S.to) q.set('to', S.to);
     const d = await api('GET', '/api/reports/dashboard?' + q.toString());
-    const { incomeExpense, outBreakdown, netProfit, withdrawnToday, expenses, bankPayments, range } = d;
+    const { incomeExpense, outBreakdown, netProfit, withdrawnToday, expenses, range } = d;
 
     const inRows = incomeExpense.inSection.entries.map((e) => `
       <div class="item">${stampHtml(e.created_at, e.username)}
@@ -364,11 +363,7 @@ async function tabReports(body) {
         <div><b>${money(e.amount)}</b> · ${esc(e.category)}${e.description ? ' · ' + esc(e.description) : ''}</div>
         <div class="meta">Date: ${esc(e.expense_date)}</div></div>`).join('') || '<div class="muted">None.</div>'}
     </div>
-    <div class="card"><h2>Bank Payments</h2>
-      ${bankPayments.map((p) => `<div class="item">${stampHtml(p.created_at, p.username)}
-        <div><b>${money(p.amount)}</b> · ${esc(p.bank_name)} · Acct ${esc(p.account_number)}</div>
-        <div class="meta">Date: ${esc(p.payment_date)}${p.notes ? ' · ' + esc(p.notes) : ''}</div></div>`).join('') || '<div class="muted">None.</div>'}
-    </div>`;
+    `;
   } catch (e) {
     body.innerHTML = storeBarHtml() + `<div class="card"><div class="error">${esc(e.message)}</div></div>`;
   }
@@ -448,41 +443,6 @@ function staffStoreSelect(id) {
   return `<label>Store</label><select id="${id}">${
     stores.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('')
   }</select>`;
-}
-
-/* ---------- Bank tab ---------- */
-async function tabBank(body) {
-  body.innerHTML = storeBarHtml() + `<div class="card"><h2>Bank Payments</h2><div id="b_err"></div>
-    ${staffStoreSelect('b_store')}
-    <label>Bank Name</label><input id="b_bank" placeholder="e.g. Chase">
-    <label>Account Number</label><input id="b_acct" placeholder="Account number">
-    <label>Amount</label><input id="b_amt" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00">
-    <label>Date</label><input id="b_date" type="date">
-    <label>Notes (optional)</label><input id="b_notes" placeholder="Notes">
-    <button class="btn" onclick="addBank()">Add Payment</button></div>
-    <div class="card"><h2>Payments</h2><div id="b_list" class="muted">Loading…</div></div>`;
-  await loadBankList();
-}
-async function loadBankList() {
-  try {
-    const { payments } = await api('GET', '/api/bank/payments?store=' + encodeURIComponent(S.selected));
-    $('#b_list').innerHTML = payments.map((p) => `<div class="item">${stampHtml(p.created_at, p.username)}
-      <div><b>${money(p.amount)}</b> · ${esc(p.bank_name)} · Acct ${esc(p.account_number)} · ${esc(p.store_name)}</div>
-      <div class="meta">Date: ${esc(p.payment_date)}${p.notes ? ' · ' + esc(p.notes) : ''}</div></div>`).join('')
-      || '<div class="muted">No payments.</div>';
-  } catch (e) { $('#b_list').innerHTML = `<div class="error">${esc(e.message)}</div>`; }
-}
-async function addBank() {
-  const errBox = $('#b_err'); errBox.innerHTML = '';
-  try {
-    await api('POST', '/api/bank/payments', {
-      storeId: $('#b_store').value,
-      bankName: $('#b_bank').value, accountNumber: $('#b_acct').value,
-      amount: $('#b_amt').value, date: $('#b_date').value, notes: $('#b_notes').value,
-    });
-    $('#b_bank').value = $('#b_acct').value = $('#b_amt').value = $('#b_notes').value = '';
-    await loadBankList();
-  } catch (e) { errBox.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
 }
 
 /* ---------- Expenses tab ---------- */

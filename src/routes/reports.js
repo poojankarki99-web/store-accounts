@@ -76,13 +76,6 @@ router.get('/dashboard', async (req, res, next) => {
        WHERE e.store_id = ANY($1) AND e.expense_date >= $2 AND e.expense_date <= $3
        ORDER BY e.expense_date DESC`, [ids, from, to]);
 
-    // Bank payments (informational)
-    const bpQ = await pool.query(
-      `SELECT p.*, u.username, s.name AS store_name FROM bank_payments p
-       JOIN users u ON u.id = p.user_id JOIN stores s ON s.id = p.store_id
-       WHERE p.store_id = ANY($1) AND p.payment_date >= $2 AND p.payment_date <= $3
-       ORDER BY p.payment_date DESC LIMIT 200`, [ids, from, to]);
-
     const inTotal = num(inQ.rows.reduce((s, r) => s + Number(r.in_amount), 0));
     const outTotal = num(inQ.rows.reduce((s, r) => s + Number(r.out_amount), 0));
     const custPayoutTotal = num(cpQ.rows.reduce((s, r) => s + Number(r.amount), 0));
@@ -121,7 +114,6 @@ router.get('/dashboard', async (req, res, next) => {
       netProfit,
       withdrawnToday, // null when no entries that day
       expenses: exQ.rows.map(stamp),
-      bankPayments: bpQ.rows.map(stamp),
       customerPayouts: cpQ.rows,
     });
   } catch (e) { next(e); }

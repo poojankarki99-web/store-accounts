@@ -55,7 +55,6 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/entries', require('./routes/entries'));
 app.use('/api/manager', require('./routes/manager'));
-app.use('/api/bank', require('./routes/bank'));
 app.use('/api/reports', require('./routes/reports'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
