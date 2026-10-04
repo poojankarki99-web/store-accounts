@@ -363,11 +363,11 @@ async function tabReports(body) {
       <div class="figure"><span class="k">Total Payout</span><span class="v">${money(incomeExpense.payoutSection.total)}</span></div>
       ${payoutRows}
       <hr class="divider">
-      <div class="figure"><span class="k">Manager expenses</span><span class="v">${money(outBreakdown.expenseTotal)}</span></div>
+      <div class="figure"><span class="k">Expenses</span><span class="v">${money(outBreakdown.expenseTotal)}</span></div>
     </div>
     ${withdrawnToday ? `<div class="card"><h2>Withdrawn Balance for the Day</h2>
       <div class="figure"><span class="k">${esc(withdrawnToday.date)}</span><span class="v">${money(withdrawnToday.total)}</span></div></div>` : ''}
-    <div class="card"><h2>Manager Expenses</h2>
+    <div class="card"><h2>Expenses</h2>
       ${expenses.map((e) => `<div class="item">${stampHtml(e.created_at, e.username)}
         <div><b>${money(e.amount)}</b> · ${esc(e.category)}${e.description ? ' · ' + esc(e.description) : ''}</div>
         <div class="meta">Date: ${esc(e.expense_date)}</div></div>`).join('') || '<div class="muted">None.</div>'}
