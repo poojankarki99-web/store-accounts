@@ -7,7 +7,8 @@ function num(v) {
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
 }
 
-// Store totals. Net = IN - OUT - manager expenses. Withdrawn (payouts) is NEVER subtracted.
+// Store totals. Net = IN - OUT, strictly. Manager expenses and customer payouts are
+// tracked separately and NEVER deducted. Withdrawn (payouts) is NEVER subtracted.
 async function storeTotals(storeId, fromDate = null, toDate = null) {
   const dateFilter = (col) => {
     const conds = [];
@@ -29,7 +30,7 @@ async function storeTotals(storeId, fromDate = null, toDate = null) {
   const outTotal = num(rep.rows[0].out_total);
   const expenseTotal = num(exp.rows[0].expense_total);
   const withdrawnTotal = num(pay.rows[0].withdrawn_total);
-  return { inTotal, outTotal, expenseTotal, withdrawnTotal, net: Math.round((inTotal - outTotal - expenseTotal) * 100) / 100 };
+  return { inTotal, outTotal, expenseTotal, withdrawnTotal, net: Math.round((inTotal - outTotal) * 100) / 100 };
 }
 
 module.exports = { num, storeTotals };

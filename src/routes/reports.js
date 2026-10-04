@@ -81,7 +81,9 @@ router.get('/dashboard', async (req, res, next) => {
     const custPayoutTotal = num(cpQ.rows.reduce((s, r) => s + Number(r.amount), 0));
     const expenseTotal = num(exQ.rows.reduce((s, r) => s + Number(r.amount), 0));
     const expenseGrand = Math.round((outTotal + custPayoutTotal + expenseTotal) * 100) / 100;
-    const netProfit = Math.round((inTotal - expenseGrand) * 100) / 100;
+    // Net Profit is strictly IN minus OUT (matches each entry's Net). Customer payouts
+    // and manager expenses are shown as breakdown lines only, never deducted.
+    const netProfit = Math.round((inTotal - outTotal) * 100) / 100;
     const withdrawnTotal = num(prRows.reduce((s, r) => s + Number(r.amount), 0));
 
     // "Withdrawn Balance for the day": only when entries exist that day
@@ -144,22 +146,14 @@ router.get('/holding', async (req, res, next) => {
       start = r.start; end = r.end; label = r.monthLabel;
     }
 
-    // Period net profit (Holding Balance main figure)
+    // Period net profit (Holding Balance main figure): strictly IN minus OUT.
+    // Customer payouts and manager expenses are tracked separately, never deducted.
     const rep = await pool.query(
       `SELECT COALESCE(SUM(in_amount),0) AS it, COALESCE(SUM(out_amount),0) AS ot
        FROM report_entries WHERE store_id = $1 AND entry_date >= $2 AND entry_date <= $3`,
       [storeId, start, end]);
-    const cp = await pool.query(
-      `SELECT COALESCE(SUM(cp.amount),0) AS t FROM customer_payouts cp
-       JOIN report_entries re ON re.id = cp.report_entry_id
-       WHERE re.store_id = $1 AND re.entry_date >= $2 AND re.entry_date <= $3`,
-      [storeId, start, end]);
-    const ex = await pool.query(
-      `SELECT COALESCE(SUM(amount),0) AS t FROM manager_expenses
-       WHERE store_id = $1 AND expense_date >= $2 AND expense_date <= $3`,
-      [storeId, start, end]);
     const periodIn = num(rep.rows[0].it);
-    const periodOut = num(rep.rows[0].ot) + num(cp.rows[0].t) + num(ex.rows[0].t);
+    const periodOut = num(rep.rows[0].ot);
     const holdingBalance = Math.round((periodIn - periodOut) * 100) / 100;
 
     // Total withdrawn for the period (top, below net profit — no names)
