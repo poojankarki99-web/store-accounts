@@ -11,7 +11,11 @@ const path = require('path');
 
 // Enable SSL for managed Postgres hosts (Supabase, Railway, Neon, ...).
 // Local docker/localhost connections stay non-SSL.
+// Set DB_SSL=false to force SSL off, DB_SSL=true to force it on.
 function wantsSSL(dbUrl) {
+  const forced = (process.env.DB_SSL || '').toLowerCase();
+  if (forced === 'false' || forced === '0' || forced === 'disable') return false;
+  if (forced === 'true' || forced === '1' || forced === 'require') return true;
   try {
     const host = new URL(dbUrl).hostname;
     return host.includes('.') && !['localhost', '127.0.0.1', '::1'].includes(host);
