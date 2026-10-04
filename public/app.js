@@ -42,10 +42,11 @@ function stampHtml(iso, username) {
           <div class="stamp-sm">Nepal: ${esc(t.nepal)}</div>`;
 }
 
-function topbar(title) {
+function topbar() {
   const u = S.user;
-  return `<div class="topbar"><div><h1>${esc(title)}</h1>
-    <div class="who">${esc(u.username)} · ${esc(u.role)}</div></div>
+  const roleLabel = u.role.charAt(0).toUpperCase() + u.role.slice(1);
+  return `<div class="topbar"><div><h1>${esc(u.username)}</h1>
+    <div class="who">${esc(roleLabel)}</div></div>
     <div><button onclick="go('changepw')">Password</button>
     <button onclick="logout()">Sign Out</button></div></div>`;
 }
@@ -81,9 +82,9 @@ function render() {
   const app = $('#app');
   if (!S.user) return void (app.innerHTML = viewLogin());
   if (S.user.role === 'employee') {
-    app.innerHTML = topbar('Store Accounts') + `<div class="page">${employeeView()}</div>`;
+    app.innerHTML = topbar() + `<div class="page">${employeeView()}</div>`;
   } else {
-    app.innerHTML = topbar('Store Accounts') + tabsHtml() + `<div class="page" id="tabbody"></div>`;
+    app.innerHTML = topbar() + tabsHtml() + `<div class="page" id="tabbody"></div>`;
     renderTab();
   }
   afterRender();
