@@ -318,6 +318,7 @@ async function tabReports(body) {
     if (S.to) q.set('to', S.to);
     const d = await api('GET', '/api/reports/dashboard?' + q.toString());
     const { incomeExpense, outBreakdown, netProfit, withdrawnToday, expenses, range } = d;
+    const mode = reportMode();
 
     const inRows = incomeExpense.inSection.entries.map((e) => `
       <div class="item">${stampHtml(e.created_at, e.username)}
@@ -342,10 +343,10 @@ async function tabReports(body) {
         <div><label>From</label><input type="date" id="r_from" value="${esc(range.from)}"></div>
         <div><label>To</label><input type="date" id="r_to" value="${esc(range.to)}"></div>
       </div>
-      <button class="btn" onclick="applyRange()">Apply Dates</button>
-      <button class="btn secondary" onclick="todayRange()">Today</button>
-      <button class="btn secondary" onclick="clearRange()">This Month</button>
-      <button class="btn secondary" onclick="allTime()">All Time</button>
+      <button class="btn ${mode === 'custom' ? '' : 'secondary'}" onclick="applyRange()">Apply Dates</button>
+      <button class="btn ${mode === 'today' ? '' : 'secondary'}" onclick="todayRange()">Today</button>
+      <button class="btn ${mode === 'month' ? '' : 'secondary'}" onclick="clearRange()">This Month</button>
+      <button class="btn ${mode === 'all' ? '' : 'secondary'}" onclick="allTime()">All Time</button>
       <div class="muted" style="margin-top:8px">Net Profit defaults to the entire month. All Time shows the current year.</div>
     </div>
     <div class="card"><h2>Net Profit</h2>
@@ -381,15 +382,30 @@ async function tabReports(body) {
 }
 function applyRange() { S.from = $('#r_from').value; S.to = $('#r_to').value; render(); }
 function clearRange() { S.from = ''; S.to = ''; render(); }
+function centralTodayKey() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+}
+function centralYearKey() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric' }).format(new Date());
+}
+// Which report view is active: 'custom' | 'today' | 'month' | 'all'
+function reportMode() {
+  if (!S.from && !S.to) return 'month';
+  const t = centralTodayKey();
+  if (S.from === t && S.to === t) return 'today';
+  const y = centralYearKey();
+  if (S.from === `${y}-01-01` && S.to === `${y}-12-31`) return 'all';
+  return 'custom';
+}
 // "Today" shows only today's report (Central Time).
 function todayRange() {
-  const t = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const t = centralTodayKey();
   S.from = t; S.to = t;
   render();
 }
 // "All Time" shows the yearly report only: current Central calendar year.
 function allTime() {
-  const y = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric' }).format(new Date());
+  const y = centralYearKey();
   S.from = `${y}-01-01`; S.to = `${y}-12-31`;
   render();
 }
