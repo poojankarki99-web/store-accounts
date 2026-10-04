@@ -328,6 +328,12 @@ async function tabReports(body) {
         ${pe.rows.map((r) => `<div>${esc(r.name)} · <span class="stamp-sm">${esc(r.tag_email)}</span> · <b>${money(r.amount)}</b></div>`).join('')}
       </div>`).join('') || '<div class="muted">No payouts in range.</div>';
 
+    const outRows = incomeExpense.inSection.entries.map((e) => `
+      <div class="item">${stampHtml(e.created_at, e.username)}
+        <div>Out: <b>${money(e.out_amount)}</b></div>
+        <div class="meta">${esc(e.store_name || '')}</div>
+      </div>`).join('') || '<div class="muted">No out entries in range.</div>';
+
     body.innerHTML = storeBarHtml() + `
     <div class="card"><h2>Reports</h2>
       <div class="cal-row">
@@ -348,11 +354,14 @@ async function tabReports(body) {
       <div class="figure"><span class="k">Total IN</span><span class="v pos">${money(incomeExpense.inSection.total)}</span></div>
       ${inRows}
       <hr class="divider">
+      <div class="section-title">Out (Register)</div>
+      <div class="figure"><span class="k">Total Out</span><span class="v">${money(outBreakdown.outTotal)}</span></div>
+      ${outRows}
+      <hr class="divider">
       <div class="section-title">Payout</div>
       <div class="figure"><span class="k">Total Payout</span><span class="v">${money(incomeExpense.payoutSection.total)}</span></div>
       ${payoutRows}
       <hr class="divider">
-      <div class="figure"><span class="k">Out (register)</span><span class="v">${money(outBreakdown.outTotal)}</span></div>
       <div class="figure"><span class="k">Customer payouts</span><span class="v">${money(outBreakdown.customerPayoutTotal)}</span></div>
       <div class="figure"><span class="k">Manager expenses</span><span class="v">${money(outBreakdown.expenseTotal)}</span></div>
     </div>
