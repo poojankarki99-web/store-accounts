@@ -1,5 +1,10 @@
 'use strict';
 
+const dns = require('dns');
+// Prefer IPv4: some hosting networks (e.g. Render free tier) have no IPv6
+// route, while managed-Postgres hostnames can resolve to IPv6 first.
+try { dns.setDefaultResultOrder('ipv4first'); } catch (_) { /* Node <17 */ }
+
 const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
