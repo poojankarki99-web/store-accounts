@@ -120,6 +120,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); bor
 .tabs button {
   flex: 0 0 auto; padding: 10px 14px; font-size: 14px; font-weight: 600;
   border: none; background: none; color: var(--muted); border-bottom: 3px solid transparent; cursor: pointer;
+  text-align: center; line-height: 1.25;
 }
 .tabs button.active { color: var(--brand); border-bottom-color: var(--brand); }
 

@@ -288,7 +288,7 @@ function entryUserHtml(e) {
 /* ---------------- Staff (admin / manager) ---------------- */
 function tabsHtml() {
   const tabs = [];
-  if (S.user.role === 'manager') tabs.push(['empentry', 'Emp Entry']);
+  if (S.user.role === 'manager') tabs.push(['empentry', 'Manager<br>Entry']);
   tabs.push(
     ['reports', 'Reports'],
     ['holding', 'Holding'],
@@ -371,7 +371,7 @@ async function tabEmpEntry(body) {
     initPayoutForm();
     return;
   }
-  body.innerHTML = `<div class="card"><h2>Emp Entry</h2>
+  body.innerHTML = `<div class="card"><h2>Manager Entry</h2>
     <div class="muted">Make an entry as an employee. It counts as done by you but shows as <b>Man/Emp</b> in reports.</div>
     <button class="big-choice" onclick="S.empView='reportEntry';render()">📝 Report Entry</button>
     <button class="big-choice" onclick="S.empView='payoutEntry';render()">💸 Payout Entry</button></div>`;
