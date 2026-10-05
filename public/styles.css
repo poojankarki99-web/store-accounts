@@ -80,6 +80,13 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); bor
 .emp-totals > div { background: #f1f5f9; border-radius: 10px; padding: 10px 6px; text-align: center; }
 .emp-totals .k { display: block; font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 .emp-totals .v { display: block; font-size: 17px; font-weight: 700; margin-top: 2px; }
+/* Holding hero boxes: side-by-side like Net Profit display */
+.hero-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px; }
+.hero-box { text-align: center; background: #f8fafc; border-radius: 14px; padding: 16px 8px; }
+.hero-box h3 { margin: 0 0 4px; font-size: 14px; font-weight: 700; }
+.hero-box .amount { font-size: 32px; font-weight: 800; letter-spacing: .02em; }
+.hero-box .amount.neg { color: var(--danger); }
+.hero-box .amount.pos { color: var(--brand-dark); }
 .stamp-toggle {
   width: 96px; height: 96px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;

@@ -551,6 +551,16 @@ async function tabHolding(body) {
     const label = mode === 'month' ? monthNameLabel(d.period.start) : d.period.label;
 
     body.innerHTML = storeBarHtml() + `
+    <div class="card">
+      <div class="hero-pair">
+        <div class="hero-box"><h3>Holding Balance</h3>
+          <div class="amount ${d.holdingBalance < 0 ? 'neg' : 'pos'}">${money(d.holdingBalance)}</div>
+          <div class="muted">${esc(label)}</div></div>
+        <div class="hero-box"><h3>Total Withdrawn</h3>
+          <div class="amount">${money(d.totalWithdrawn)}</div>
+          <div class="muted">${esc(label)}</div></div>
+      </div>
+    </div>
     <div class="card"><h2>Holding Balance — ${esc(storeName(S.selected))}</h2>
       <div class="cal-row">
         <div><label>From</label><input type="date" id="h_from" value="${esc(d.period.start)}" onchange="applyHoldingRange()"></div>
@@ -560,12 +570,9 @@ async function tabHolding(body) {
       <button class="btn ${mode === 'yesterday' ? '' : 'secondary'}" onclick="holdingYesterday()">Yesterday</button>
       <button class="btn ${mode === 'last7' ? '' : 'secondary'}" onclick="holdingLast7()">Last 7 Days</button>
       <button class="btn ${mode === 'month' ? '' : 'secondary'}" onclick="holdingMonth()">This Month</button>
-      <div class="figure" style="margin-top:12px"><span class="k">Holding Balance (${esc(label)})</span>
-        <span class="v ${d.holdingBalance < 0 ? 'neg' : 'pos'}">${money(d.holdingBalance)}</span></div>
-      <div class="figure"><span class="k">Total Withdrawn Amount (${esc(label)})</span>
-        <span class="v">${money(d.totalWithdrawn)}</span></div>
       <div class="muted">${tzLabel()}</div>
     </div>
+    <div class="card"><h2>Withdrawn Amount Details — ${esc(label)}</h2>${withdrawnDetailsHtml(d)}</div>
     ${await holdingMonthBrowserHtml()}`;
   } catch (e) {
     body.innerHTML = storeBarHtml() + `<div class="card"><div class="error">${esc(e.message)}</div></div>`;
@@ -596,6 +603,13 @@ async function holdingMonthBrowserHtml() {
       <div class="section-title">${esc(monthNameLabel(HselMonth + '-01'))}</div>
       ${entryRowsHtml(md)}
     </div>`;
+}
+function withdrawnDetailsHtml(d) {
+  return d.details.map((pe) => `
+    <div class="item">${stampHtml(pe.created_at, pe.username)}
+      ${pe.rows.map((r) => `<div>${esc(r.name)} · <span class="stamp-sm">${esc(r.tag_email)}</span> · <b>${money(r.amount)}</b></div>`).join('')}
+      <div class="meta">Entry total: <b>${money(pe.entryTotal)}</b></div>
+    </div>`).join('') || '<div class="muted">No withdrawals in this period.</div>';
 }
 function payoutDetailHtml(d, canCut) {
   return d.details.map((pe) => `
