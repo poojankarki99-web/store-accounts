@@ -454,10 +454,12 @@ async function tabReports(body) {
         <div><label>From</label><input type="date" class="date-sm" id="r_from" value="${esc(range.from)}" onchange="applyRange()"></div>
         <div><label>To</label><input type="date" class="date-sm" id="r_to" value="${esc(range.to)}" onchange="applyRange()"></div>
       </div>
+      <div class="preset-grid">
       <button class="btn ${mode === 'today' ? '' : 'secondary'}" onclick="todayRange()">Today</button>
       <button class="btn ${mode === 'yesterday' ? '' : 'secondary'}" onclick="yesterdayRange()">Yesterday</button>
       <button class="btn ${mode === 'last7' ? '' : 'secondary'}" onclick="last7Range()">Last 7 Days</button>
       <button class="btn ${mode === 'month' ? '' : 'secondary'}" onclick="clearRange()">This Month</button>
+      </div>
       <div class="muted" style="margin-top:8px">Net Profit defaults to the entire month. All Time shows the current year.</div>
     </div>
     <div class="card">
@@ -579,10 +581,12 @@ async function tabHolding(body) {
         <div><label>From</label><input type="date" class="date-sm" id="h_from" value="${esc(d.period.start)}" onchange="applyHoldingRange()"></div>
         <div><label>To</label><input type="date" class="date-sm" id="h_to" value="${esc(d.period.end)}" onchange="applyHoldingRange()"></div>
       </div>
+      <div class="preset-grid">
       <button class="btn ${mode === 'today' ? '' : 'secondary'}" onclick="holdingToday()">Today</button>
       <button class="btn ${mode === 'yesterday' ? '' : 'secondary'}" onclick="holdingYesterday()">Yesterday</button>
       <button class="btn ${mode === 'last7' ? '' : 'secondary'}" onclick="holdingLast7()">Last 7 Days</button>
       <button class="btn ${mode === 'month' ? '' : 'secondary'}" onclick="holdingMonth()">This Month</button>
+      </div>
       <div class="muted">${tzLabel()}</div>
     </div>
     <div class="card"><h2>Withdrawn Amount Details — ${esc(label)}</h2>${withdrawnDetailsHtml(d)}</div>

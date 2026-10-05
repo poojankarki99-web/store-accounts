@@ -159,7 +159,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); bor
 /* Calendar inputs */
 .cal-row { display: flex; gap: 8px; align-items: end; }
 .cal-row > div { flex: 1; }
-input.date-sm { padding: 7px 6px; font-size: 12px; }
+input.date-sm { padding: 8px 6px; font-size: 13px; letter-spacing: 0.02em; }
+/* Preset buttons: smaller, in a 2x2 grid */
+.preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.preset-grid .btn { margin-top: 0; padding: 10px 6px; font-size: 13px; }
 
 /* Login */
 .login-wrap { padding: 40px 16px; }
