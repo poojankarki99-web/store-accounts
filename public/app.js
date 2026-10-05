@@ -57,8 +57,7 @@ function topbar() {
   const roleLabel = u.role.charAt(0).toUpperCase() + u.role.slice(1);
   return `<div class="topbar"><div><h1>${esc(u.username)}</h1>
     <div class="who">${esc(roleLabel)}</div></div>
-    <div>${u.role === 'admin' ? `<button onclick="setTab('alerts')">Alerts</button>` : ''}
-    <button onclick="logout()">Sign Out</button></div></div>`;
+    <div>${u.role === 'admin' ? `<button onclick="setTab('alerts')">Alerts</button>` : ''}</div></div>`;
 }
 
 async function logout() {
@@ -301,7 +300,8 @@ function tabsHtml() {
 
 /* ---------- Settings tab: Team + Edit Log (admin) ---------- */
 async function tabSettings(body) {
-  body.innerHTML = `<div id="set_team"></div><div id="set_audit"></div>`;
+  body.innerHTML = `<div id="set_team"></div><div id="set_audit"></div>
+    <div class="card"><button class="btn danger" onclick="logout()">Sign Out</button></div>`;
   await tabTeam($('#set_team'));
   if (S.user.role === 'admin') await tabAudit($('#set_audit'));
 }

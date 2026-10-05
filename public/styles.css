@@ -153,8 +153,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); bor
 
 /* Alerts */
 .alert { border-radius: 10px; padding: 12px; margin-bottom: 10px; font-size: 15px; }
-.alert.yellow { background: var(--warn-bg); color: #92400e; border: 1px solid #fcd34d; }
-.alert.red { background: var(--danger-bg); color: #991b1b; border: 1px solid #fca5a5; }
+.alert.yellow, .alert.red { background: var(--danger); color: #fff; border: none; }
+.alert.yellow .stamp-sm, .alert.red .stamp-sm { color: rgba(255,255,255,.85); }
 
 /* Audit table */
 .audit-row { font-size: 13px; border-bottom: 1px solid var(--line); padding: 8px 0; }
