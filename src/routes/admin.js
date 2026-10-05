@@ -57,6 +57,20 @@ router.delete('/stores/:id', async (req, res, next) => {
 });
 
 // ---------- Users ----------
+// Admin lists soft-deleted users with who created/deleted them
+router.get('/users/deleted', async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT u.id, u.username, u.role, u.deleted_at,
+             c.username AS manager, d.username AS deleted_by_name
+      FROM users u
+      LEFT JOIN users c ON c.id = u.created_by
+      LEFT JOIN users d ON d.id = u.deleted_by
+      WHERE COALESCE(u.is_deleted, FALSE)
+      ORDER BY u.deleted_at DESC NULLS LAST, u.username`);
+    res.json({ users: rows });
+  } catch (e) { next(e); }
+});
 router.get('/users', async (req, res, next) => {
   try {
     const { rows } = await pool.query(`SELECT id, username, role, created_at, is_deleted, COALESCE(can_edit_entries, TRUE) AS can_edit_entries FROM users WHERE NOT COALESCE(is_deleted, FALSE) ORDER BY role, username`);
@@ -80,8 +94,8 @@ router.post('/users', async (req, res, next) => {
     }
     await client.query('BEGIN');
     const { rows } = await client.query(
-      'INSERT INTO users (username, password_hash, role) VALUES ($1,$2,$3) RETURNING id, username, role, created_at',
-      [String(username).trim(), await hashPassword(password), role]
+      'INSERT INTO users (username, password_hash, role, created_by) VALUES ($1,$2,$3,$4) RETURNING id, username, role, created_at',
+      [String(username).trim(), await hashPassword(password), role, req.user.id]
     );
     const user = rows[0];
     const ids = Array.isArray(storeIds) ? storeIds.map(Number).filter(Number.isInteger) : [];
@@ -145,7 +159,7 @@ router.delete('/users/:id', async (req, res, next) => {
     if (Number(req.params.id) === req.user.id) return res.status(400).json({ error: 'Cannot delete your own account' });
     // Soft delete: remove login access but keep all entered data.
     // The username stays on historical records, shown red/bold in reports.
-    await pool.query('UPDATE users SET is_deleted = TRUE WHERE id = $1', [req.params.id]);
+    await pool.query('UPDATE users SET is_deleted = TRUE, deleted_by = $1, deleted_at = NOW() WHERE id = $2', [req.user.id, req.params.id]);
     res.json({ ok: true });
   } catch (e) { next(e); }
 });

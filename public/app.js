@@ -984,7 +984,27 @@ function renderDeleteEmployeeSection() {
       <option value="">— Select —</option>
       ${emps.map((u) => `<option value="${u.id}">${esc(u.username)}</option>`).join('')}
     </select>
-    <button class="btn danger" onclick="delEmployee()">Delete Employee</button></div>`;
+    <button class="btn danger" onclick="delEmployee()">Delete Employee</button>
+    <div style="margin-top:12px"><button class="btn secondary" onclick="toggleDeletedList()">View Deleted Username List</button></div>
+    <div id="del_list" style="margin-top:8px"></div></div>`;
+}
+let deletedUsersCache = null;
+async function toggleDeletedList() {
+  const box = $('#del_list');
+  if (!box) return;
+  if (box.innerHTML) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="muted">Loading…</div>';
+  try {
+    const r = await api('GET', '/api/admin/users/deleted');
+    deletedUsersCache = r.users || [];
+    if (!deletedUsersCache.length) { box.innerHTML = '<div class="muted">No deleted accounts.</div>'; return; }
+    box.innerHTML = deletedUsersCache.map((u) => `<div class="audit-card">
+        <div class="rowline"><span><b>${esc(u.username)}</b></span><span class="muted">${esc(u.role || '')}</span></div>
+        <div class="muted">Manager: ${esc(u.manager || '—')}</div>
+        <div class="muted">Deleted by: ${esc(u.deleted_by_name || '—')}${u.deleted_at ? ' · ' + esc(fmtBoth(u.deleted_at)) : ''}</div>
+      </div>`).join('');
+  } catch (e) { box.innerHTML = '<div class="err">Failed to load deleted list.</div>'; }
+}
 }
 async function delEmployee() {
   const errBox = $('#del_emp_err'); errBox.innerHTML = '';

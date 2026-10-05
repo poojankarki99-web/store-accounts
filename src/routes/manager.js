@@ -141,8 +141,8 @@ router.post('/employees', async (req, res, next) => {
     }
     await client.query('BEGIN');
     const { rows } = await client.query(
-      'INSERT INTO users (username, password_hash, role) VALUES ($1,$2,$3) RETURNING id, username, role, created_at',
-      [String(username).trim(), await hashPassword(password), 'employee']
+      'INSERT INTO users (username, password_hash, role, created_by) VALUES ($1,$2,$3,$4) RETURNING id, username, role, created_at',
+      [String(username).trim(), await hashPassword(password), 'employee', req.user.id]
     );
     const user = rows[0];
     for (const sid of ids) {
