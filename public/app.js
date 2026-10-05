@@ -1118,13 +1118,40 @@ async function resolveAlert(id) {
 
 /* ---------- Edit log tab (admin) ---------- */
 let AUfrom = '', AUto = '';
+function auditMode() {
+  const t = centralTodayKey();
+  if (AUfrom === t && AUto === t) return 'today';
+  const y = centralDateKeyOffset(1);
+  if (AUfrom === y && AUto === y) return 'yesterday';
+  if (AUfrom === centralDateKeyOffset(6) && AUto === t) return 'last7';
+  if (AUfrom === centralDateKeyOffset(14) && AUto === t) return 'last15';
+  if (AUfrom === t.slice(0, 7) + '-01' && AUto === t) return 'month';
+  if (AUfrom === t.slice(0, 4) + '-01-01' && AUto === t) return 'year';
+  return 'custom';
+}
+function auPreset(from, to) { AUfrom = from; AUto = to; render(); }
+function auToday() { const t = centralTodayKey(); auPreset(t, t); }
+function auYesterday() { const y = centralDateKeyOffset(1); auPreset(y, y); }
+function auLast7() { auPreset(centralDateKeyOffset(6), centralTodayKey()); }
+function auLast15() { auPreset(centralDateKeyOffset(14), centralTodayKey()); }
+function auMonth() { const t = centralTodayKey(); auPreset(t.slice(0, 7) + '-01', t); }
+function auYear() { const t = centralTodayKey(); auPreset(t.slice(0, 4) + '-01-01', t); }
 async function tabAudit(body) {
+  const mode = auditMode();
   body.innerHTML = `<div class="card"><h2>Edit Log</h2>
     <div class="cal-row">
-      <div><label>From</label><input type="date" id="au_from" value="${esc(AUfrom)}" onchange="AUfrom=$('#au_from').value;render()"></div>
-      <div><label>To</label><input type="date" id="au_to" value="${esc(AUto)}" onchange="AUto=$('#au_to').value;render()"></div>
+      <div><label>From</label><input type="date" class="date-sm" id="au_from" value="${esc(AUfrom)}" onchange="AUfrom=$('#au_from').value;render()"></div>
+      <div><label>To</label><input type="date" class="date-sm" id="au_to" value="${esc(AUto)}" onchange="AUto=$('#au_to').value;render()"></div>
     </div>
-    <div id="au_list" class="muted">Loading…</div></div>`;
+    <div class="preset-grid">
+      <button class="btn ${mode === 'today' ? '' : 'secondary'}" onclick="auToday()">Today</button>
+      <button class="btn ${mode === 'yesterday' ? '' : 'secondary'}" onclick="auYesterday()">Yesterday</button>
+      <button class="btn ${mode === 'last7' ? '' : 'secondary'}" onclick="auLast7()">Last 7 Days</button>
+      <button class="btn ${mode === 'last15' ? '' : 'secondary'}" onclick="auLast15()">Last 15 Days</button>
+      <button class="btn ${mode === 'month' ? '' : 'secondary'}" onclick="auMonth()">This Month</button>
+      <button class="btn ${mode === 'year' ? '' : 'secondary'}" onclick="auYear()">This Year</button>
+    </div>
+    <div id="au_list" class="muted" style="margin-top:8px">Loading…</div></div>`;
   if (!AUfrom && !AUto) {
     $('#au_list').innerHTML = '<div class="muted">Select a date above to view edits.</div>';
     return;
