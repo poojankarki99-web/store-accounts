@@ -343,6 +343,8 @@ function renderTab() {
   const body = $('#tabbody');
   if (!body) return;
   if (S.view === 'changepw') { body.innerHTML = changePwForm(); return; }
+  // Admin Settings is global (Team, Edit Log, Deleted list) — no store selection needed
+  if (S.tab === 'settings' && S.user.role === 'admin') { tabSettings(body); return; }
   if (!S.selected) { body.innerHTML = storeSelectorHtml(); return; }
   if (S.tab === 'holding' && S.selected === 'all') {
     body.innerHTML = `<div class="card"><h2>Holding Balance</h2>
