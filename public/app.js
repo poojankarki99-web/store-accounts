@@ -451,8 +451,8 @@ async function tabReports(body) {
     </div>
     <div class="card"><h2>Reports</h2>
       <div class="cal-row">
-        <div><label>From</label><input type="date" id="r_from" value="${esc(range.from)}" onchange="applyRange()"></div>
-        <div><label>To</label><input type="date" id="r_to" value="${esc(range.to)}" onchange="applyRange()"></div>
+        <div><label>From</label><input type="date" class="date-sm" id="r_from" value="${esc(range.from)}" onchange="applyRange()"></div>
+        <div><label>To</label><input type="date" class="date-sm" id="r_to" value="${esc(range.to)}" onchange="applyRange()"></div>
       </div>
       <button class="btn ${mode === 'today' ? '' : 'secondary'}" onclick="todayRange()">Today</button>
       <button class="btn ${mode === 'yesterday' ? '' : 'secondary'}" onclick="yesterdayRange()">Yesterday</button>
@@ -576,8 +576,8 @@ async function tabHolding(body) {
     </div>
     <div class="card"><h2>Holding Balance — ${esc(storeName(S.selected))}</h2>
       <div class="cal-row">
-        <div><label>From</label><input type="date" id="h_from" value="${esc(d.period.start)}" onchange="applyHoldingRange()"></div>
-        <div><label>To</label><input type="date" id="h_to" value="${esc(d.period.end)}" onchange="applyHoldingRange()"></div>
+        <div><label>From</label><input type="date" class="date-sm" id="h_from" value="${esc(d.period.start)}" onchange="applyHoldingRange()"></div>
+        <div><label>To</label><input type="date" class="date-sm" id="h_to" value="${esc(d.period.end)}" onchange="applyHoldingRange()"></div>
       </div>
       <button class="btn ${mode === 'today' ? '' : 'secondary'}" onclick="holdingToday()">Today</button>
       <button class="btn ${mode === 'yesterday' ? '' : 'secondary'}" onclick="holdingYesterday()">Yesterday</button>
