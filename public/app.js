@@ -572,7 +572,7 @@ function entryRowsHtml(d) {
     const dkey = String(e.entry_date).slice(0, 10); // YYYY-MM-DD only, no time
     (groups[dkey] = groups[dkey] || []).push(e);
   }
-  return Object.keys(groups).sort().reverse().map((dt) => {
+  return Object.keys(groups).sort().map((dt) => {
     const dayIn = groups[dt].reduce((s, e) => s + Number(e.in_amount), 0);
     const dayOut = groups[dt].reduce((s, e) => s + (Number(e.cust_payout_total) || 0), 0);
     const dayNet = Math.round((dayIn - dayOut) * 100) / 100;
