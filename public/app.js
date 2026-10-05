@@ -458,7 +458,9 @@ async function tabReports(body) {
       <button class="btn ${mode === 'today' ? '' : 'secondary'}" onclick="todayRange()">Today</button>
       <button class="btn ${mode === 'yesterday' ? '' : 'secondary'}" onclick="yesterdayRange()">Yesterday</button>
       <button class="btn ${mode === 'last7' ? '' : 'secondary'}" onclick="last7Range()">Last 7 Days</button>
+      <button class="btn ${mode === 'last15' ? '' : 'secondary'}" onclick="last15Range()">Last 15 Days</button>
       <button class="btn ${mode === 'month' ? '' : 'secondary'}" onclick="clearRange()">This Month</button>
+      <button class="btn ${mode === 'year' ? '' : 'secondary'}" onclick="yearRange()">This Year</button>
       </div>
       <div class="muted" style="margin-top:8px">Net Profit defaults to the entire month. All Time shows the current year.</div>
     </div>
@@ -513,6 +515,8 @@ function reportMode() {
   const y = centralDateKeyOffset(1);
   if (S.from === y && S.to === y) return 'yesterday';
   if (S.from === centralDateKeyOffset(6) && S.to === t) return 'last7';
+  if (S.from === centralDateKeyOffset(14) && S.to === t) return 'last15';
+  if (S.from === t.slice(0, 4) + '-01-01' && S.to === t) return 'year';
   return 'custom';
 }
 // "Today" shows only today's report (Central Time).
@@ -533,6 +537,18 @@ function last7Range() {
   S.to = centralTodayKey();
   render();
 }
+// "Last 15 Days" shows today + previous 14 days (Central Time).
+function last15Range() {
+  S.from = centralDateKeyOffset(14);
+  S.to = centralTodayKey();
+  render();
+}
+// "This Year" shows Jan 1 to today (Central Time).
+function yearRange() {
+  S.from = centralTodayKey().slice(0, 4) + '-01-01';
+  S.to = centralTodayKey();
+  render();
+}
 
 /* ---------- Holding tab (single store only) ---------- */
 /* ---------- Holding tab (single store only) ---------- */
@@ -544,12 +560,16 @@ function holdingMode() {
   const y = centralDateKeyOffset(1);
   if (Hfrom === y && Hto === y) return 'yesterday';
   if (Hfrom === centralDateKeyOffset(6) && Hto === t) return 'last7';
+  if (Hfrom === centralDateKeyOffset(14) && Hto === t) return 'last15';
+  if (Hfrom === t.slice(0, 4) + '-01-01' && Hto === t) return 'year';
   return 'custom';
 }
 function applyHoldingRange() { Hfrom = $('#h_from').value; Hto = $('#h_to').value; render(); }
 function holdingToday() { const t = centralTodayKey(); Hfrom = t; Hto = t; render(); }
 function holdingYesterday() { const y = centralDateKeyOffset(1); Hfrom = y; Hto = y; render(); }
 function holdingLast7() { Hfrom = centralDateKeyOffset(6); Hto = centralTodayKey(); render(); }
+function holdingLast15() { Hfrom = centralDateKeyOffset(14); Hto = centralTodayKey(); render(); }
+function holdingYear() { Hfrom = centralTodayKey().slice(0, 4) + '-01-01'; Hto = centralTodayKey(); render(); }
 function holdingMonth() { Hfrom = ''; Hto = ''; render(); }
 async function tabHolding(body) {
   body.innerHTML = storeBarHtml() + `<div class="card"><h2>Holding Balance</h2><div class="muted">Loading…</div></div>`;
@@ -585,7 +605,9 @@ async function tabHolding(body) {
       <button class="btn ${mode === 'today' ? '' : 'secondary'}" onclick="holdingToday()">Today</button>
       <button class="btn ${mode === 'yesterday' ? '' : 'secondary'}" onclick="holdingYesterday()">Yesterday</button>
       <button class="btn ${mode === 'last7' ? '' : 'secondary'}" onclick="holdingLast7()">Last 7 Days</button>
+      <button class="btn ${mode === 'last15' ? '' : 'secondary'}" onclick="holdingLast15()">Last 15 Days</button>
       <button class="btn ${mode === 'month' ? '' : 'secondary'}" onclick="holdingMonth()">This Month</button>
+      <button class="btn ${mode === 'year' ? '' : 'secondary'}" onclick="holdingYear()">This Year</button>
       </div>
       <div class="muted">${tzLabel()}</div>
     </div>
