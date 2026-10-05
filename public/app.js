@@ -194,7 +194,9 @@ function initReportForm() {
     const custTotal = [...document.querySelectorAll('#custRows .c_amt')]
       .reduce((s, el) => s + (parseFloat(el.value) || 0), 0);
     const net = (parseFloat($('#f_in').value) || 0) - custTotal;
-    $('#f_net').textContent = money(net);
+    const netEl = $('#f_net');
+    netEl.textContent = money(net);
+    netEl.classList.toggle('neg', net < 0);
   };
   $('#f_in').addEventListener('input', upd);
   box.addEventListener('input', upd);
@@ -384,7 +386,7 @@ async function tabReports(body) {
       const net = Math.round((g.inTotal - g.outTotal) * 100) / 100;
       const entryHtml = g.entries.map((e) =>
         `<div class="item">${stampHtml(e.created_at, entryUserLabel(e))}
-          <div>IN: <b>${money(e.in_amount)}</b> · Net: <b>${money(e.net_amount)}</b></div>
+          <div>IN: <b>${money(e.in_amount)}</b> · Net: <b class="${Number(e.net_amount) < 0 ? 'neg' : ''}">${money(e.net_amount)}</b></div>
         </div>`).join('');
       const outDetailHtml = g.outRows.map((c) =>
         `<div class="item">${stampHtml(c.created_at, entryUserLabel(c))}
@@ -604,7 +606,7 @@ function entryRowsHtml(d) {
     const dayOut = groups[dt].reduce((s, e) => s + (Number(e.cust_payout_total) || 0), 0);
     const dayNet = Math.round((dayIn - dayOut) * 100) / 100;
     return `
-    <div class="emp-name">${esc(dt)} <span class="stamp-sm">(Net Profit: ${money(dayNet)})</span></div>
+    <div class="emp-name">${esc(dt)} <span class="stamp-sm">(Net Profit: <span class="${dayNet < 0 ? 'neg' : ''}">${money(dayNet)}</span>)</span></div>
     <div class="muted" style="margin:-4px 0 8px">${esc(weekdayOf(dt))}</div>
     ${groups[dt].map((e) => {
       const out = Number(e.cust_payout_total) || 0;
