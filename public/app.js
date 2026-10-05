@@ -342,24 +342,46 @@ async function tabReports(body) {
     const { incomeExpense, outBreakdown, netProfit, withdrawnToday, expenses, range } = d;
     const mode = reportMode();
 
-    const inRows = incomeExpense.inSection.entries.map((e) => `
-      <div class="item">${stampHtml(e.created_at, e.username)}
-        <div>IN: <b>${money(e.in_amount)}</b> · Net: <b>${money(e.net_amount)}</b></div>
-        <div class="meta">Hours worked: ${Math.floor(e.hours_worked_minutes / 60)}h ${e.hours_worked_minutes % 60}m · ${esc(e.store_name || '')}</div>
-      </div>`).join('') || '<div class="muted">No IN entries in range.</div>';
+    // Group report entries + their customer payouts per employee
+    const cpByEntry = {};
+    for (const c of (d.customerPayouts || [])) {
+      (cpByEntry[c.report_entry_id] = cpByEntry[c.report_entry_id] || []).push(c);
+    }
+    const byEmp = {};
+    for (const e of incomeExpense.inSection.entries) {
+      const u = e.username || 'Unknown';
+      const g = (byEmp[u] = byEmp[u] || { inTotal: 0, outTotal: 0, entries: [] });
+      g.entries.push(e);
+      g.inTotal = Math.round((g.inTotal + Number(e.in_amount)) * 100) / 100;
+      for (const c of (cpByEntry[e.id] || [])) {
+        g.outTotal = Math.round((g.outTotal + Number(c.amount)) * 100) / 100;
+      }
+    }
+    const empHtml = Object.keys(byEmp).sort().map((u) => {
+      const g = byEmp[u];
+      const entryHtml = g.entries.map((e) => {
+        const cps = (cpByEntry[e.id] || []).map((c) =>
+          `<div class="meta">→ ${esc(c.customer_name)} · ${esc(c.game_name)} · <b>${money(c.amount)}</b></div>`).join('');
+        return `<div class="item">${stampHtml(e.created_at, e.username)}
+          <div>IN: <b>${money(e.in_amount)}</b> · Net: <b>${money(e.net_amount)}</b></div>
+          ${cps}</div>`;
+      }).join('');
+      return `<div class="section-title">${esc(u)}</div>
+        <div class="figure"><span class="k">Total IN</span><span class="v pos">${money(g.inTotal)}</span></div>
+        <div class="figure"><span class="k">Total Out</span><span class="v">${money(g.outTotal)}</span></div>
+        ${entryHtml}`;
+    }).join('') || '<div class="muted">No entries in range.</div>';
 
     const payoutRows = incomeExpense.payoutSection.entries.map((pe) => `
       <div class="item">${stampHtml(pe.created_at, pe.username)}
         ${pe.rows.map((r) => `<div>${esc(r.name)} · <span class="stamp-sm">${esc(r.tag_email)}</span> · <b>${money(r.amount)}</b></div>`).join('')}
       </div>`).join('') || '<div class="muted">No payouts in range.</div>';
 
-    const custPayoutRows = (d.customerPayouts || []).map((c) => `
-      <div class="item">${stampHtml(c.created_at, c.username)}
-        <div><b>${money(c.amount)}</b> · ${esc(c.customer_name)} · <span class="stamp-sm">${esc(c.game_name)}</span></div>
-        <div class="meta">${esc(c.store_name || '')}</div>
-      </div>`).join('') || '<div class="muted">No customer payouts in range.</div>';
-
     body.innerHTML = storeBarHtml() + `
+    <div class="card"><h2>Net Profit</h2>
+      <div class="figure"><span class="k">Net Profit (${esc(range.from)} → ${esc(range.to)})</span>
+      <span class="v ${netProfit < 0 ? 'neg' : 'pos'}">${money(netProfit)}</span></div>
+    </div>
     <div class="card"><h2>Reports</h2>
       <div class="cal-row">
         <div><label>From</label><input type="date" id="r_from" value="${esc(range.from)}" onchange="applyRange()"></div>
@@ -374,28 +396,16 @@ async function tabReports(body) {
       </div>` : ''}
       <div class="muted" style="margin-top:8px">Net Profit defaults to the entire month. All Time shows the current year.</div>
     </div>
-    <div class="card"><h2>Net Profit</h2>
-      <div class="figure"><span class="k">Net Profit (${esc(range.from)} → ${esc(range.to)})</span>
-      <span class="v ${netProfit < 0 ? 'neg' : 'pos'}">${money(netProfit)}</span></div>
-    </div>
     <div class="card"><h2>Income &amp; Expense (${esc(range.from)} → ${esc(range.to)})</h2>
-      <div class="section-title">IN</div>
-      <div class="figure"><span class="k">Total IN</span><span class="v pos">${money(incomeExpense.inSection.total)}</span></div>
-      ${inRows}
-      <hr class="divider">
-      <div class="section-title">Customer Payout</div>
-      <div class="figure"><span class="k">Total Customer Payout</span><span class="v">${money(outBreakdown.customerPayoutTotal)}</span></div>
-      ${custPayoutRows}
-      <hr class="divider">
-      <div class="section-title">Payout</div>
+      ${empHtml}
+    </div>
+    <div class="card"><h2>Payout (${esc(range.from)} → ${esc(range.to)})</h2>
       <div class="figure"><span class="k">Total Payout</span><span class="v">${money(incomeExpense.payoutSection.total)}</span></div>
       ${payoutRows}
-      <hr class="divider">
-      <div class="figure"><span class="k">Expenses</span><span class="v">${money(outBreakdown.expenseTotal)}</span></div>
     </div>
     ${withdrawnToday ? `<div class="card"><h2>Withdrawn Balance for the Day</h2>
       <div class="figure"><span class="k">${esc(withdrawnToday.date)}</span><span class="v">${money(withdrawnToday.total)}</span></div></div>` : ''}
-    <div class="card"><h2>Expenses</h2>
+    <div class="card"><h2>Expenses (${esc(range.from)} → ${esc(range.to)})</h2>
       ${expenses.map((e) => `<div class="item">${stampHtml(e.created_at, e.username)}
         <div><b>${money(e.amount)}</b> · ${esc(e.category)}${e.description ? ' · ' + esc(e.description) : ''}</div>
         <div class="meta">Date: ${esc(e.expense_date)}</div></div>`).join('') || '<div class="muted">None.</div>'}
