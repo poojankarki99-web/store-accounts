@@ -35,33 +35,19 @@ function fmtBoth(iso) {
   return { central: f('America/Chicago'), nepal: f('Asia/Kathmandu') };
 }
 
-// Timezone view: admin toggles central/nepal; manager sees nepal-primary + central;
-// employee sees nepal only.
-function tzView() {
-  if (!S.user) return 'central';
-  if (S.user.role === 'admin') return S.tz || 'central';
-  if (S.user.role === 'manager') return 'nepal-both';
-  return 'nepal';
-}
+// All timestamps display in Nepal Time. The backend still records created_at as
+// timestamptz and formatBoth() keeps computing both zones for the audit trail.
 function tzLabel() {
-  const v = tzView();
-  return (v === 'nepal' || v === 'nepal-both') ? 'Nepal Time' : 'Central Time';
+  return 'Nepal Time';
 }
-// Bold uppercase stamp: DATE TIME — EMPLOYEE NAME, second timezone below when applicable
+// Bold uppercase stamp: DATE TIME — EMPLOYEE NAME (Nepal Time)
 function stampHtml(iso, username) {
   const t = fmtBoth(iso);
-  const v = tzView();
-  const primary = (v === 'nepal' || v === 'nepal-both') ? t.nepal : t.central;
-  let html = `<div class="stamp">${esc(primary)} — ${esc(username || '')}</div>`;
-  if (v === 'both') html += `<div class="stamp-sm">Nepal: ${esc(t.nepal)}</div>`;
-  if (v === 'nepal-both') html += `<div class="stamp-sm">Central: ${esc(t.central)}</div>`;
-  return html;
+  return `<div class="stamp">${esc(t.nepal)} — ${esc(username || '')}</div>`;
 }
-// Single-line timestamp for alerts/audit, following the viewer's timezone
+// Single-line timestamp for alerts/audit (Nepal Time)
 function tzStampLine(ts) {
-  const v = tzView();
-  if (v === 'nepal' || v === 'nepal-both') return `${esc(ts.nepal.datetime)} Nepal`;
-  return `${esc(ts.central.datetime)} Central`;
+  return `${esc(ts.nepal.datetime)} Nepal`;
 }
 
 function topbar() {
@@ -394,10 +380,6 @@ async function tabReports(body) {
       <button class="btn ${mode === 'today' ? '' : 'secondary'}" onclick="todayRange()">Today</button>
       <button class="btn ${mode === 'month' ? '' : 'secondary'}" onclick="clearRange()">This Month</button>
       <button class="btn ${mode === 'all' ? '' : 'secondary'}" onclick="allTime()">All Time</button>
-      ${S.user.role === 'admin' ? `<div class="row2" style="margin-top:8px">
-        <button class="btn ${tzView() === 'central' ? '' : 'secondary'}" onclick="S.tz='central';render()">Central Time</button>
-        <button class="btn ${tzView() === 'nepal' ? '' : 'secondary'}" onclick="S.tz='nepal';render()">Nepal Time</button>
-      </div>` : ''}
       <div class="muted" style="margin-top:8px">Net Profit defaults to the entire month. All Time shows the current year.</div>
     </div>
     <div class="card"><h2>Income &amp; Expense (${esc(range.from)} → ${esc(range.to)})</h2>
