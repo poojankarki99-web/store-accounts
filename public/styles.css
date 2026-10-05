@@ -81,11 +81,15 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); bor
 .emp-totals .k { display: block; font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 .emp-totals .v { display: block; font-size: 17px; font-weight: 700; margin-top: 2px; }
 .stamp-toggle {
-  background: transparent; border: 1.5px solid; border-radius: 8px;
-  padding: 6px 10px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  width: 96px; height: 96px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  background: #fff; border: 1.5px solid #d1d5db; border-radius: 12px;
+  font-size: 11px; font-weight: 700; line-height: 1.35; text-align: center;
+  color: #374151; cursor: pointer; padding: 8px; flex-shrink: 0;
 }
-.stamp-toggle.on { color: #16a34a; border-color: #16a34a; }
-.stamp-toggle.off { color: #dc2626; border-color: #dc2626; }
+.stamp-toggle .light { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
+.stamp-toggle.on .light { background: #16a34a; box-shadow: 0 0 10px #16a34a; }
+.stamp-toggle.off .light { background: #dc2626; box-shadow: 0 0 10px #dc2626; }
 
 .big-choice {
   display: block; width: 100%; padding: 28px 16px; margin: 12px 0;
