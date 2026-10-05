@@ -900,7 +900,9 @@ async function tabTeam(body) {
     <label>Assign Stores</label><div>${stores.map((s) =>
       `<label class="checkline"><input type="checkbox" class="ne_store" value="${s.id}"> ${esc(s.name)}</label>`).join('') || '<div class="muted">No stores assigned.</div>'}</div>
     <button class="btn" onclick="mgrCreateEmployee()">Create Employee</button></div>
-  <div class="card"><h2>Team — Reset Employee Passwords</h2><div id="t_list" class="muted">Loading…</div></div>`;
+  <div class="card"><h2>Team — Reset Employee Passwords</h2><div id="t_list" class="muted">Loading…</div></div>
+  <div class="card"><button class="btn secondary" onclick="toggleMgrDeletedList()">View Deleted Username List</button>
+    <div id="mgr_del_list" style="margin-top:8px"></div></div>`;
   try {
     const { employees } = await api('GET', '/api/manager/employees');
     $('#t_list').innerHTML = employees.map((e) => `
@@ -911,6 +913,22 @@ async function tabTeam(body) {
           <button class="btn small" onclick="mgrResetPw(${e.id})">Reset</button>
         </div></div>`).join('') || '<div class="muted">No employees in your stores.</div>';
   } catch (e) { $('#t_list').innerHTML = `<div class="error">${esc(e.message)}</div>`; }
+}
+async function toggleMgrDeletedList() {
+  const box = $('#mgr_del_list');
+  if (!box) return;
+  if (box.innerHTML) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="muted">Loading…</div>';
+  try {
+    const r = await api('GET', '/api/manager/deleted');
+    const users = r.users || [];
+    if (!users.length) { box.innerHTML = '<div class="muted">No deleted accounts.</div>'; return; }
+    box.innerHTML = users.map((u) => `<div class="audit-card">
+        <div class="rowline"><span><b>${esc(u.username)}</b></span><span class="muted">${esc(u.role || '')}</span></div>
+        <div class="muted">Manager: ${esc(u.manager || '—')}</div>
+        <div class="muted">Deleted by: ${esc(u.deleted_by_name || '—')}${u.deleted_at ? ' · ' + esc(fmtBoth(u.deleted_at)) : ''}</div>
+      </div>`).join('');
+  } catch (e) { box.innerHTML = '<div class="err">Failed to load deleted list.</div>'; }
 }
 async function mgrCreateEmployee() {
   const errBox = $('#t_err'); errBox.innerHTML = '';
