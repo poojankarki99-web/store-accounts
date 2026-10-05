@@ -609,7 +609,8 @@ async function showEditEntry(id) {
   box.innerHTML = '<div class="muted">Loading…</div>';
   try {
     const emps = await getEmployeesForTransfer();
-    box.innerHTML = `<div class="row2" style="margin-top:8px">
+    box.innerHTML = `<div class="muted" style="margin:8px 0 4px">Entered: ${esc(fmtBoth(e.created_at))}</div>
+      <div class="row2" style="margin-top:8px">
         <div><label>IN</label><input type="number" id="hee_in_${id}" value="${esc(e.in_amount)}" step="0.01" min="0"></div>
         <div><label>Date</label><input type="date" id="hee_date_${id}" value="${esc(e.entry_date)}"></div></div>
       <div style="margin-top:8px"><label>Employee</label><select id="hee_emp_${id}">
