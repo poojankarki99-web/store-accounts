@@ -35,15 +35,15 @@ function fmtBoth(iso) {
   return { central: f('America/Chicago'), nepal: f('Asia/Kathmandu') };
 }
 
-// All timestamps display in Nepal Time. The backend still records created_at as
-// timestamptz and formatBoth() keeps computing both zones for the audit trail.
+// All timestamps display both timezones in small text (not bold/block).
+// The backend still records created_at as timestamptz for the audit trail.
 function tzLabel() {
   return 'Nepal Time';
 }
-// Bold uppercase stamp: DATE TIME — EMPLOYEE NAME (Nepal Time)
+// Small timestamp: both zones + employee name
 function stampHtml(iso, username) {
   const t = fmtBoth(iso);
-  return `<div class="stamp">${esc(t.nepal)} — ${esc(username || '')}</div>`;
+  return `<div class="stamp-sm">${esc(t.nepal)} Nepal · ${esc(t.central)} Central — ${esc(username || '')}</div>`;
 }
 // Single-line timestamp for alerts/audit (Nepal Time)
 function tzStampLine(ts) {
@@ -340,26 +340,31 @@ async function tabReports(body) {
     const byEmp = {};
     for (const e of incomeExpense.inSection.entries) {
       const u = e.username || 'Unknown';
-      const g = (byEmp[u] = byEmp[u] || { inTotal: 0, outTotal: 0, entries: [] });
+      const g = (byEmp[u] = byEmp[u] || { inTotal: 0, outTotal: 0, entries: [], outRows: [] });
       g.entries.push(e);
       g.inTotal = Math.round((g.inTotal + Number(e.in_amount)) * 100) / 100;
       for (const c of (cpByEntry[e.id] || [])) {
         g.outTotal = Math.round((g.outTotal + Number(c.amount)) * 100) / 100;
+        g.outRows.push(c);
       }
     }
     const empHtml = Object.keys(byEmp).sort().map((u) => {
       const g = byEmp[u];
-      const entryHtml = g.entries.map((e) => {
-        const cps = (cpByEntry[e.id] || []).map((c) =>
-          `<div class="meta">→ ${esc(c.customer_name)} · ${esc(c.game_name)} · <b>${money(c.amount)}</b></div>`).join('');
-        return `<div class="item">${stampHtml(e.created_at, e.username)}
+      const net = Math.round((g.inTotal - g.outTotal) * 100) / 100;
+      const entryHtml = g.entries.map((e) =>
+        `<div class="item">${stampHtml(e.created_at, e.username)}
           <div>IN: <b>${money(e.in_amount)}</b> · Net: <b>${money(e.net_amount)}</b></div>
-          ${cps}</div>`;
-      }).join('');
+        </div>`).join('');
+      const outDetailHtml = g.outRows.map((c) =>
+        `<div class="item">${stampHtml(c.created_at, c.username)}
+          <div><b>${money(c.amount)}</b> · ${esc(c.customer_name)} · <span class="stamp-sm">${esc(c.game_name)}</span></div>
+        </div>`).join('') || '<div class="muted">None.</div>';
       return `<div class="emp-name">${esc(u)}</div>
-        <div class="figure"><span class="k">Total IN</span><span class="v pos">${money(g.inTotal)}</span></div>
+        <div class="figure"><span class="k">Total In</span><span class="v pos">${money(g.inTotal)}</span></div>
         <div class="figure"><span class="k">Total Out</span><span class="v">${money(g.outTotal)}</span></div>
-        ${entryHtml}`;
+        <div class="figure"><span class="k">Net</span><span class="v ${net < 0 ? 'neg' : 'pos'}">${money(net)}</span></div>
+        ${entryHtml}
+        <details class="out-details"><summary>Details Of Out</summary>${outDetailHtml}</details>`;
     }).join('') || '<div class="muted">No entries in range.</div>';
 
     const payoutRows = incomeExpense.payoutSection.entries.map((pe) => `
@@ -383,7 +388,11 @@ async function tabReports(body) {
       <button class="btn ${mode === 'month' ? '' : 'secondary'}" onclick="clearRange()">This Month</button>
       <div class="muted" style="margin-top:8px">Net Profit defaults to the entire month. All Time shows the current year.</div>
     </div>
-    <div class="card"><h2>Income &amp; Expense (${esc(range.from)} → ${esc(range.to)})</h2>
+    <div class="card"><h2>In &amp; Out (${esc(range.from)} → ${esc(range.to)})</h2>
+      <div class="figure"><span class="k">Total In</span><span class="v pos">${money(incomeExpense.inSection.total)}</span></div>
+      <div class="figure"><span class="k">Total Out</span><span class="v">${money(outBreakdown.customerPayoutTotal)}</span></div>
+      <div class="figure"><span class="k">Net</span><span class="v ${netProfit < 0 ? 'neg' : 'pos'}">${money(netProfit)}</span></div>
+      <hr class="divider">
       ${empHtml}
     </div>
     <div class="card"><h2>Payout (${esc(range.from)} → ${esc(range.to)})</h2>

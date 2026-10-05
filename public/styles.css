@@ -143,6 +143,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); bor
 .section-title { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 0 6px; font-weight: 700; }
 /* Employee names in Income & Expense: big and bold */
 .emp-name { font-size: 22px; font-weight: 800; letter-spacing: .02em; margin: 20px 0 6px; }
+/* Collapsible out details */
+.out-details { margin: 10px 0; }
+.out-details summary { cursor: pointer; font-weight: 700; font-size: 15px; padding: 10px 0; }
 .divider { border: none; border-top: 2px dashed var(--line); margin: 16px 0; }
 .payout-row { background: #f8fafc; border-radius: 10px; padding: 10px; margin-bottom: 10px; }
 .checkline { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 15px; }
