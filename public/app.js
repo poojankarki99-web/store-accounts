@@ -909,8 +909,16 @@ async function tabTeam(body) {
         <div class="row2" style="margin-top:6px">
           <input id="npw_${e.id}" placeholder="New password (min 4, A-Z 0-9)">
           <button class="btn small" onclick="mgrResetPw(${e.id})">Reset</button>
-        </div></div>`).join('') || '<div class="muted">No employees in your stores.</div>';
+        </div>
+        ${S.user.can_edit_entries !== false ? `<div style="margin-top:6px"><button class="btn small danger" onclick="mgrDeleteEmployee(${e.id})">Delete</button></div>` : ''}</div>`).join('') || '<div class="muted">No employees in your stores.</div>';
   } catch (e) { $('#t_list').innerHTML = `<div class="error">${esc(e.message)}</div>`; }
+}
+async function mgrDeleteEmployee(id) {
+  if (!confirm('Delete this employee? They will lose login access. All entered data is kept.')) return;
+  try {
+    await api('DELETE', '/api/manager/employees/' + id);
+    await tabTeam($('#tabbody'));
+  } catch (e) { alert(e.message); }
 }
 async function mgrCreateEmployee() {
   const errBox = $('#t_err'); errBox.innerHTML = '';
@@ -1000,7 +1008,6 @@ async function toggleDeletedList() {
     if (!deletedUsersCache.length) { box.innerHTML = '<div class="muted">No deleted accounts.</div>'; return; }
     box.innerHTML = deletedUsersCache.map((u) => `<div class="audit-card">
         <div class="rowline"><span><b>${esc(u.username)}</b></span><span class="muted">${esc(u.role || '')}</span></div>
-        <div class="muted">Manager: ${esc(u.manager || '—')}</div>
         <div class="muted">Deleted by: ${esc(u.deleted_by_name || '—')}${u.deleted_at ? ' · ' + esc(fmtBoth(u.deleted_at)) : ''}</div>
       </div>`).join('');
   } catch (e) { box.innerHTML = '<div class="err">Failed to load deleted list.</div>'; }

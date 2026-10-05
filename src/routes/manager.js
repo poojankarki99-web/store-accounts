@@ -123,6 +123,23 @@ router.get('/employees', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ---------- Manager soft-deletes their own store employees (needs edit permission) ----------
+router.delete('/employees/:id', async (req, res, next) => {
+  try {
+    if (req.user.role !== 'manager') return res.status(403).json({ error: 'Managers only' });
+    if (req.user.can_edit_entries === false) return res.status(403).json({ error: 'Deleting is not enabled for your account' });
+    const ids = await accessibleStoreIds(req.user);
+    const targetId = Number(req.params.id);
+    const { rows } = await pool.query(
+      `SELECT u.id FROM users u JOIN user_stores us ON us.user_id = u.id
+       WHERE u.id = $1 AND u.role = 'employee' AND NOT COALESCE(u.is_deleted, FALSE) AND us.store_id = ANY($2)`,
+      [targetId, ids]);
+    if (!rows.length) return res.status(403).json({ error: 'Not your store employee' });
+    await pool.query('UPDATE users SET is_deleted = TRUE, deleted_by = $1, deleted_at = NOW() WHERE id = $2', [req.user.id, targetId]);
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
 // ---------- Manager creates EMPLOYEES for their own stores ----------
 router.post('/employees', async (req, res, next) => {
   const client = await pool.connect();
