@@ -59,7 +59,7 @@ router.delete('/stores/:id', async (req, res, next) => {
 // ---------- Users ----------
 router.get('/users', async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT id, username, role, created_at FROM users ORDER BY role, username');
+    const { rows } = await pool.query(`SELECT id, username, role, created_at, is_deleted FROM users WHERE NOT COALESCE(is_deleted, FALSE) ORDER BY role, username`);
     const users = [];
     for (const u of rows) {
       users.push({ ...u, stores: await getUserStores(u.id) });
@@ -142,7 +142,9 @@ router.put('/users/:id', async (req, res, next) => {
 router.delete('/users/:id', async (req, res, next) => {
   try {
     if (Number(req.params.id) === req.user.id) return res.status(400).json({ error: 'Cannot delete your own account' });
-    await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
+    // Soft delete: remove login access but keep all entered data.
+    // The username stays on historical records, shown red/bold in reports.
+    await pool.query('UPDATE users SET is_deleted = TRUE WHERE id = $1', [req.params.id]);
     res.json({ ok: true });
   } catch (e) { next(e); }
 });

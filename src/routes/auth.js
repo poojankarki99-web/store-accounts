@@ -13,7 +13,7 @@ router.post('/login', async (req, res, next) => {
     if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
     const { rows } = await pool.query('SELECT * FROM users WHERE username = $1', [String(username).trim()]);
     const user = rows[0];
-    if (!user || !(await verifyPassword(String(password), user.password_hash))) {
+    if (!user || user.is_deleted || !(await verifyPassword(String(password), user.password_hash))) {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
     await new Promise((resolve, reject) => {

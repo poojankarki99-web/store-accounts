@@ -279,6 +279,12 @@ function entryUserLabel(e) {
   if (!e) return 'Unknown';
   return e.user_role === 'manager' ? 'Man/Emp' : (e.username || 'Unknown');
 }
+// Deleted employee names render red, block, bold
+function entryUserHtml(e) {
+  const label = entryUserLabel(e);
+  if (e && e.user_deleted) return `<span class="deleted-name">${esc(label)}</span>`;
+  return esc(label);
+}
 /* ---------------- Staff (admin / manager) ---------------- */
 function tabsHtml() {
   const tabs = [];
@@ -394,7 +400,8 @@ async function tabReports(body) {
     const byEmp = {};
     for (const e of incomeExpense.inSection.entries) {
       const u = entryUserLabel(e);
-      const g = (byEmp[u] = byEmp[u] || { inTotal: 0, outTotal: 0, entries: [], outRows: [] });
+      const g = (byEmp[u] = byEmp[u] || { inTotal: 0, outTotal: 0, entries: [], outRows: [], deleted: false });
+      if (e.user_deleted) g.deleted = true;
       g.entries.push(e);
       g.inTotal = Math.round((g.inTotal + Number(e.in_amount)) * 100) / 100;
       for (const c of (cpByEntry[e.id] || [])) {
@@ -422,7 +429,7 @@ async function tabReports(body) {
             <div><b>${money(c.amount)}</b> · ${esc(c.customer_name)} · <span class="stamp-sm">${esc(c.game_name)}</span></div>
           </div>`).join('')
       ).join('') || '<div class="muted">None.</div>';
-      return `<div class="emp-name">${esc(u)}</div>
+      return `<div class="emp-name">${g.deleted ? `<span class="deleted-name">${esc(u)}</span>` : esc(u)}</div>
         <div class="emp-totals">
           <div><span class="k">Total In</span><span class="v pos">${money(g.inTotal)}</span></div>
           <div><span class="k">Total Out</span><span class="v">${money(g.outTotal)}</span></div>
@@ -660,7 +667,7 @@ function entryRowsHtml(d) {
       const out = Number(e.cust_payout_total) || 0;
       const net = Math.round((Number(e.in_amount) - out) * 100) / 100;
       return `<div class="item" id="he_${e.id}">
-        <div><b>${esc(entryUserLabel(e))}</b> — IN: <b>${money(e.in_amount)}</b> · Out: <b>${money(out)}</b></div>
+        <div><b>${entryUserHtml(e)}</b> — IN: <b>${money(e.in_amount)}</b> · Out: <b>${money(out)}</b></div>
         <div class="net-row"><span>Employee Net: <b class="${net < 0 ? 'neg' : 'pos'}">${money(net)}</b></span>${canEdit ? `<button class="edit-ghost" onclick="showEditEntry(${e.id})">Edit</button>` : ''}</div>
         ${canEdit ? `<div id="hef_${e.id}"></div>` : ''}
       </div>`;
@@ -910,7 +917,8 @@ async function tabTeamAdmin(body) {
     <label>Role</label><select id="nu_role"><option value="employee">employee</option><option value="manager">manager</option><option value="admin">admin</option></select>
     <label>Assign Stores (managers: pick many)</label><div id="nu_stores"></div>
     <button class="btn" onclick="addUser()">Create User</button></div>
-  <div class="card"><h2>Users & Managers</h2><div id="usersList" class="muted">Loading…</div></div>`;
+  <div class="card"><h2>Users & Managers</h2><div id="usersList" class="muted">Loading…</div></div>
+  <div id="delEmpSection"></div>`;
   await loadTeamAdmin();
 }
 async function loadTeamAdmin() {
@@ -932,9 +940,33 @@ async function loadTeamAdmin() {
           ${stores.map((s) => `<label class="checkline" style="display:inline-flex;margin-right:10px">
             <input type="checkbox" class="us_${u.id}" value="${s.id}" ${u.stores.some((x) => x.id === s.id) ? 'checked' : ''}> ${esc(s.name)}</label>`).join('')}
           <button class="btn small secondary" onclick="saveUserStores(${u.id})">Save Stores</button>
-          ${u.id !== S.user.id ? `<button class="btn small danger" onclick="delUser(${u.id},'${esc(u.username)}')">Delete</button>` : ''}
         </div></div>`).join('') || '<div class="muted">No users.</div>';
+    renderDeleteEmployeeSection();
   } catch (e) { $('#tm_err').innerHTML = `<div class="error">${esc(e.message)}</div>`; }
+}
+function renderDeleteEmployeeSection() {
+  const emps = Tusers.filter((u) => u.role === 'employee' && u.id !== S.user.id);
+  const box = $('#delEmpSection');
+  if (!box) return;
+  box.innerHTML = `<div class="card"><h2>Delete Employee</h2>
+    <div class="muted">Removes login access. All entered data is kept; the name shows red in reports.</div>
+    <div id="del_emp_err"></div>
+    <label>Employee</label><select id="del_emp_sel">
+      <option value="">— Select —</option>
+      ${emps.map((u) => `<option value="${u.id}">${esc(u.username)}</option>`).join('')}
+    </select>
+    <button class="btn danger" onclick="delEmployee()">Delete Employee</button></div>`;
+}
+async function delEmployee() {
+  const errBox = $('#del_emp_err'); errBox.innerHTML = '';
+  const id = $('#del_emp_sel').value;
+  if (!id) { errBox.innerHTML = `<div class="error">Pick an employee first.</div>`; return; }
+  const u = Tusers.find((x) => String(x.id) === String(id));
+  if (!confirm(`Delete employee "${u ? u.username : ''}"? Their login stops working but all data is kept.`)) return;
+  try {
+    await api('DELETE', '/api/admin/users/' + id);
+    await loadTeamAdmin();
+  } catch (e) { errBox.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
 }
 let Tusers = [];
 function showEditUser(id) {
@@ -990,12 +1022,6 @@ async function saveUserStores(id) {
     $('#tm_err').innerHTML = `<div class="success">Stores updated.</div>`;
   } catch (e) { $('#tm_err').innerHTML = `<div class="error">${esc(e.message)}</div>`; }
 }
-async function delUser(id, username) {
-  if (!confirm('Delete user ' + username + '?')) return;
-  try { await api('DELETE', `/api/admin/users/${id}`); await loadTeamAdmin(); }
-  catch (e) { $('#tm_err').innerHTML = `<div class="error">${esc(e.message)}</div>`; }
-}
-
 /* ---------- Alerts tab (admin) ---------- */
 async function tabAlerts(body) {
   body.innerHTML = `<div class="card"><div class="net-row"><h2 style="margin:0">Alerts</h2>
