@@ -558,6 +558,11 @@ function withdrawnDetailHtml(d) {
       ${pe.rows.map((r) => `<div class="stamp-sm">${esc(r.name)} · ${esc(r.tag_email)} · ${money(r.amount)}</div>`).join('')}
     </div>`).join('');
 }
+function weekdayOf(ymd) {
+  const [y, m, dd] = String(ymd).split('-').map(Number);
+  if (!y || !m || !dd) return '';
+  return new Date(y, m - 1, dd).toLocaleDateString('en-US', { weekday: 'long' });
+}
 let Hentries = []; // cache for edit forms
 function entryRowsHtml(d) {
   Hentries = d.entries || [];
@@ -573,6 +578,7 @@ function entryRowsHtml(d) {
     const dayNet = Math.round((dayIn - dayOut) * 100) / 100;
     return `
     <div class="emp-name">${esc(dt)} <span class="stamp-sm">(Net Profit: ${money(dayNet)})</span></div>
+    <div class="muted" style="margin:-4px 0 8px">${esc(weekdayOf(dt))}</div>
     ${groups[dt].map((e) => {
       const out = Number(e.cust_payout_total) || 0;
       const net = Math.round((Number(e.in_amount) - out) * 100) / 100;
