@@ -445,8 +445,8 @@ async function tabReports(body) {
       </div>`).join('') || '<div class="muted">No payouts in range.</div>';
 
     body.innerHTML = storeBarHtml() + `
-    <div class="card net-hero"><h2>Net Profit</h2>
-      <div class="net-hero-amount ${netProfit < 0 ? 'neg' : 'pos'}">${money(netProfit)}</div>
+    <div class="card net-hero ${netProfit < 0 ? 'neg' : 'pos'}"><h2>Net Profit</h2>
+      <div class="net-hero-amount">${money(netProfit)}</div>
       <div class="muted">${esc(rangeLabel)}</div>
     </div>
     <div class="card"><h2>Reports</h2>
