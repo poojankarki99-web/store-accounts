@@ -30,8 +30,8 @@ function fmtBoth(iso) {
   const d = new Date(iso);
   const f = (tz) => new Intl.DateTimeFormat('en-CA', {
     timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-  }).format(d).replace(',', '');
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h12',
+  }).format(d).replace(',', '').replace('a.m.', 'AM').replace('p.m.', 'PM');
   return { central: f('America/Chicago'), nepal: f('Asia/Kathmandu') };
 }
 

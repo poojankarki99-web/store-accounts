@@ -12,13 +12,15 @@ function tzParts(date, tz) {
     timeZone: tz,
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hourCycle: 'h23',
+    hourCycle: 'h12',
   }).formatToParts(date);
-  const get = (t) => parts.find((p) => p.type === t).value;
+  const get = (t) => { const p = parts.find((p) => p.type === t); return p ? p.value : ''; };
+  const dp = get('dayPeriod').toLowerCase();
+  const ap = dp === 'a.m.' ? 'AM' : dp === 'p.m.' ? 'PM' : dp.toUpperCase();
   return {
     date: `${get('year')}-${get('month')}-${get('day')}`,
-    time: `${get('hour')}:${get('minute')}:${get('second')}`,
-    datetime: `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')}`,
+    time: `${get('hour')}:${get('minute')}:${get('second')} ${ap}`,
+    datetime: `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')} ${ap}`,
   };
 }
 
