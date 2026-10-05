@@ -87,6 +87,9 @@ async function boot() {
       S.allStores = stores;
     }
   } catch (_) { S.user = null; }
+  const _bt = centralTodayKey();
+  S.from = _bt; S.to = _bt;
+  Hfrom = _bt; Hto = _bt;
   render();
 }
 
@@ -138,6 +141,9 @@ async function doLogin() {
       S.allStores = stores;
     }
     S.selected = null; S.tab = 'reports';
+    const _t = centralTodayKey();
+    S.from = _t; S.to = _t;
+    Hfrom = _t; Hto = _t;
     render();
   } catch (e) { errBox.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
 }
@@ -288,7 +294,16 @@ function tabsHtml() {
   return `<div class="tabs">${tabs.map(([k, label]) =>
     `<button class="${S.tab === k ? 'active' : ''}" onclick="setTab('${k}')">${label}</button>`).join('')}</div>`;
 }
-function setTab(t) { S.tab = t; render(); }
+function setTab(t) {
+  S.tab = t;
+  // Opening Reports or Holding always starts on today's report
+  if (t === 'reports' || t === 'holding') {
+    const today = centralTodayKey();
+    S.from = today; S.to = today;
+    Hfrom = today; Hto = today;
+  }
+  render();
+}
 
 function storeName(id) {
   const s = myStores().find((x) => String(x.id) === String(id));
