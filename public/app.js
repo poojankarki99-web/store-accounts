@@ -435,7 +435,7 @@ async function tabReports(body) {
     </div>
     <div class="card">
       <div class="net-row"><h2 style="margin:0">In &amp; Out (${esc(range.from)} → ${esc(range.to)})</h2>
-        <button class="stamp-toggle ${S.showStamps ? 'on' : 'off'}" onclick="S.showStamps=!S.showStamps;render()">Time Stamp: ${S.showStamps ? 'On' : 'Off'}</button></div>
+        <button class="stamp-toggle ${S.showStamps ? 'on' : 'off'}" onclick="S.showStamps=!S.showStamps;render()">Press To Turn Time Stamp On/Off</button></div>
       <div class="figure"><span class="k">Total In</span><span class="v pos">${money(incomeExpense.inSection.total)}</span></div>
       <div class="figure"><span class="k">Total Out</span><span class="v">${money(outBreakdown.customerPayoutTotal)}</span></div>
       <div class="figure"><span class="k">Net</span><span class="v ${netProfit < 0 ? 'neg' : 'pos'}">${money(netProfit)}</span></div>
