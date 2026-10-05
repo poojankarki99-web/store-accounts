@@ -163,6 +163,14 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); bor
 /* Calendar inputs */
 .cal-row { display: flex; gap: 8px; align-items: end; }
 .cal-row > div { flex: 1; min-width: 0; }
+/* Store picker tiles: 3 per row, tap to enter */
+.store-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.store-tile {
+  padding: 16px 8px; font-size: 14px; font-weight: 700;
+  border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink);
+  cursor: pointer; text-align: center;
+}
+.store-tile:active { background: var(--brand); color: #fff; }
 input.date-sm { padding: 8px 6px; font-size: 13px; letter-spacing: 0.02em; }
 /* Preset buttons: smaller, in a 2x2 grid */
 .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }

@@ -324,20 +324,17 @@ function storeName(id) {
   return s ? s.name : '';
 }
 
-// No report data until a store is selected. Admins get the combined option; managers pick assigned stores only.
+// Store picker: tap a tile to go straight in — 3 per row. Admins get All Stores first.
 function storeSelectorHtml() {
   const stores = myStores();
-  const opts = stores.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
-  const allOpt = S.user.role === 'admin' ? `<option value="all">All Stores (combined)</option>` : '';
+  const tiles = [];
+  if (S.user.role === 'admin') tiles.push(`<button class="store-tile" onclick="pickStoreTile('all')">All Stores</button>`);
+  for (const s of stores) tiles.push(`<button class="store-tile" onclick="pickStoreTile('${s.id}')">${esc(s.name)}</button>`);
   return `<div class="card"><h2>Select a Store</h2>
-    <div class="muted">Choose a store to view its reports.</div>
-    <label>Store</label>
-    <select id="sel_store"><option value="">— Select —</option>${opts}${allOpt}</select>
-    <button class="btn" onclick="pickStore()">View Reports</button></div>`;
+    <div class="muted">Tap a store to view its reports.</div>
+    <div class="store-grid">${tiles.join('')}</div></div>`;
 }
-function pickStore() {
-  const v = $('#sel_store').value;
-  if (!v) return;
+function pickStoreTile(v) {
   S.selected = v;
   render();
 }
