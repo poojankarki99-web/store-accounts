@@ -57,7 +57,7 @@ function topbar() {
   const roleLabel = u.role.charAt(0).toUpperCase() + u.role.slice(1);
   return `<div class="topbar"><div><h1>${esc(u.username)}</h1>
     <div class="who">${esc(roleLabel)}</div></div>
-    <div><button onclick="go('changepw')">Password</button>
+    <div>${u.role === 'admin' ? `<button onclick="setTab('alerts')">Alerts</button>` : ''}
     <button onclick="logout()">Sign Out</button></div></div>`;
 }
 
@@ -290,7 +290,7 @@ function tabsHtml() {
     ['cih', 'CIH Report'],
     ['team', 'Team'],
   );
-  if (S.user.role === 'admin') tabs.push(['alerts', 'Alerts'], ['audit', 'Edit Log']);
+  if (S.user.role === 'admin') tabs.push(['audit', 'Edit Log']);
   return `<div class="tabs">${tabs.map(([k, label]) =>
     `<button class="${S.tab === k ? 'active' : ''}" onclick="setTab('${k}')">${label}</button>`).join('')}</div>`;
 }
