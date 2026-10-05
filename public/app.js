@@ -1016,6 +1016,10 @@ async function tabAudit(body) {
       <div><label>To</label><input type="date" id="au_to" value="${esc(AUto)}" onchange="AUto=$('#au_to').value;render()"></div>
     </div>
     <div id="au_list" class="muted">Loading…</div></div>`;
+  if (!AUfrom && !AUto) {
+    $('#au_list').innerHTML = '<div class="muted">Select a date above to view edits.</div>';
+    return;
+  }
   try {
     const q = new URLSearchParams();
     if (AUfrom) q.set('from', AUfrom);

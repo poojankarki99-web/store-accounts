@@ -163,7 +163,8 @@ router.post('/users/:id/reset-password', async (req, res, next) => {
 // ---------- Edit log (admin ONLY) ----------
 router.get('/audit', async (req, res, next) => {
   try {
-    const conds = [];
+    // Edit Log shows manager edits only (admin edits are not tracked)
+    const conds = [`u.role = 'manager'`];
     const vals = [];
     if (req.query.from && isValidDateKey(req.query.from)) {
       vals.push(req.query.from);
