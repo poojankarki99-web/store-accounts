@@ -131,7 +131,7 @@ router.put('/report/:id', canEdit, async (req, res, next) => {
       changes.user_id = newUserId;
     }
     // Move entry to a different date
-    if (req.body.entryDate !== undefined) {
+    if (req.body.entryDate !== undefined && req.body.entryDate !== '') {
       if (!isValidDateKey(req.body.entryDate)) return res.status(400).json({ error: 'Invalid date' });
       changes.entry_date = req.body.entryDate;
     }

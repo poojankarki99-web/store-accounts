@@ -435,7 +435,7 @@ async function tabReports(body) {
     </div>
     <div class="card">
       <div class="net-row"><h2 style="margin:0">In &amp; Out (${esc(range.from)} → ${esc(range.to)})</h2>
-        <button class="edit-ghost" onclick="S.showStamps=!S.showStamps;render()">Time Stamp: ${S.showStamps ? 'On' : 'Off'}</button></div>
+        <button class="stamp-toggle ${S.showStamps ? 'on' : 'off'}" onclick="S.showStamps=!S.showStamps;render()">Time Stamp: ${S.showStamps ? 'On' : 'Off'}</button></div>
       <div class="figure"><span class="k">Total In</span><span class="v pos">${money(incomeExpense.inSection.total)}</span></div>
       <div class="figure"><span class="k">Total Out</span><span class="v">${money(outBreakdown.customerPayoutTotal)}</span></div>
       <div class="figure"><span class="k">Net</span><span class="v ${netProfit < 0 ? 'neg' : 'pos'}">${money(netProfit)}</span></div>
@@ -655,7 +655,7 @@ async function showEditEntry(id) {
     box.innerHTML = `<div class="muted" style="margin:8px 0 4px">Entered: ${esc(fmtBoth(e.created_at))}</div>
       <div class="row2" style="margin-top:8px">
         <div><label>IN</label><input type="number" id="hee_in_${id}" value="${esc(e.in_amount)}" step="0.01" min="0"></div>
-        <div><label>Date</label><input type="date" id="hee_date_${id}" value="${esc(e.entry_date)}"></div></div>
+        <div><label>Date</label><input type="date" id="hee_date_${id}" value="${esc(String(e.entry_date).slice(0, 10))}"></div></div>
       <div style="margin-top:8px"><label>Employee</label><select id="hee_emp_${id}">
           ${emps.map((x) => `<option value="${x.id}" ${x.id === e.user_id ? 'selected' : ''}>${esc(x.username)}</option>`).join('')}
         </select></div>
