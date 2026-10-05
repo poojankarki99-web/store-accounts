@@ -378,8 +378,9 @@ async function tabReports(body) {
         <div><label>To</label><input type="date" id="r_to" value="${esc(range.to)}" onchange="applyRange()"></div>
       </div>
       <button class="btn ${mode === 'today' ? '' : 'secondary'}" onclick="todayRange()">Today</button>
+      <button class="btn ${mode === 'yesterday' ? '' : 'secondary'}" onclick="yesterdayRange()">Yesterday</button>
+      <button class="btn ${mode === 'last7' ? '' : 'secondary'}" onclick="last7Range()">Last 7 Days</button>
       <button class="btn ${mode === 'month' ? '' : 'secondary'}" onclick="clearRange()">This Month</button>
-      <button class="btn ${mode === 'all' ? '' : 'secondary'}" onclick="allTime()">All Time</button>
       <div class="muted" style="margin-top:8px">Net Profit defaults to the entire month. All Time shows the current year.</div>
     </div>
     <div class="card"><h2>Income &amp; Expense (${esc(range.from)} → ${esc(range.to)})</h2>
@@ -406,22 +407,27 @@ function clearRange() { S.from = ''; S.to = ''; render(); }
 function centralTodayKey() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 }
-function centralYearKey() {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric' }).format(new Date());
-}
 // "2026-10-15" -> "October 2026" (for the month label under Net Profit)
 function monthNameLabel(ymd) {
   const [y, m] = String(ymd).split('-');
   const names = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   return `${names[Number(m) - 1] || ''} ${y}`.trim();
 }
-// Which report view is active: 'custom' | 'today' | 'month' | 'all'
+// Central date key N days ago (DST-safe calendar arithmetic)
+function centralDateKeyOffset(daysAgo) {
+  const [y, m, d] = centralTodayKey().split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() - daysAgo);
+  return dt.toISOString().slice(0, 10);
+}
+// Which report view is active: 'custom' | 'today' | 'yesterday' | 'last7' | 'month'
 function reportMode() {
   if (!S.from && !S.to) return 'month';
   const t = centralTodayKey();
   if (S.from === t && S.to === t) return 'today';
-  const y = centralYearKey();
-  if (S.from === `${y}-01-01` && S.to === `${y}-12-31`) return 'all';
+  const y = centralDateKeyOffset(1);
+  if (S.from === y && S.to === y) return 'yesterday';
+  if (S.from === centralDateKeyOffset(6) && S.to === t) return 'last7';
   return 'custom';
 }
 // "Today" shows only today's report (Central Time).
@@ -430,10 +436,16 @@ function todayRange() {
   S.from = t; S.to = t;
   render();
 }
-// "All Time" shows the yearly report only: current Central calendar year.
-function allTime() {
-  const y = centralYearKey();
-  S.from = `${y}-01-01`; S.to = `${y}-12-31`;
+// "Yesterday" shows only yesterday's report (Central Time).
+function yesterdayRange() {
+  const y = centralDateKeyOffset(1);
+  S.from = y; S.to = y;
+  render();
+}
+// "Last 7 Days" shows today + previous 6 days (Central Time).
+function last7Range() {
+  S.from = centralDateKeyOffset(6);
+  S.to = centralTodayKey();
   render();
 }
 
