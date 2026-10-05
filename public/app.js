@@ -801,10 +801,6 @@ async function loadTeamAdmin() {
         <button class="edit-ghost" onclick="showEditUser(${u.id})">Edit</button></div>
         <div class="meta">${u.stores.map((s) => esc(s.name)).join(', ') || 'no stores'}</div>
         <div id="tuf_${u.id}"></div>
-        <div class="row2" style="margin-top:6px">
-          <input id="rpw_${u.id}" placeholder="New password">
-          <button class="btn small" onclick="adminResetPw(${u.id})">Reset PW</button>
-        </div>
         <div style="margin-top:6px"><span class="muted">Stores:</span>
           ${stores.map((s) => `<label class="checkline" style="display:inline-flex;margin-right:10px">
             <input type="checkbox" class="us_${u.id}" value="${s.id}" ${u.stores.some((x) => x.id === s.id) ? 'checked' : ''}> ${esc(s.name)}</label>`).join('')}
