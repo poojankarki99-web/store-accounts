@@ -370,7 +370,7 @@ async function tabReports(body) {
           <div>IN: <b>${money(e.in_amount)}</b> · Net: <b>${money(e.net_amount)}</b></div>
           ${cps}</div>`;
       }).join('');
-      return `<div class="section-title">${esc(u)}</div>
+      return `<div class="emp-name">${esc(u)}</div>
         <div class="figure"><span class="k">Total IN</span><span class="v pos">${money(g.inTotal)}</span></div>
         <div class="figure"><span class="k">Total Out</span><span class="v">${money(g.outTotal)}</span></div>
         ${entryHtml}`;

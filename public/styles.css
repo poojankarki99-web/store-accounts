@@ -141,6 +141,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); bor
 .success { background: #dcfce7; color: #166534; border-radius: 10px; padding: 12px; margin: 12px 0; font-weight: 600; }
 
 .section-title { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 0 6px; font-weight: 700; }
+/* Employee names in Income & Expense: big and bold */
+.emp-name { font-size: 22px; font-weight: 800; letter-spacing: .02em; margin: 20px 0 6px; }
 .divider { border: none; border-top: 2px dashed var(--line); margin: 16px 0; }
 .payout-row { background: #f8fafc; border-radius: 10px; padding: 10px; margin-bottom: 10px; }
 .checkline { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 15px; }
