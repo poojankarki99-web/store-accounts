@@ -341,6 +341,10 @@ async function tabReports(body) {
     const d = await api('GET', '/api/reports/dashboard?' + q.toString());
     const { incomeExpense, outBreakdown, netProfit, withdrawnToday, expenses, range } = d;
     const mode = reportMode();
+    // Label under the big number: month name for month view, else the date range
+    const rangeLabel = mode === 'month'
+      ? monthNameLabel(range.from)
+      : (range.from === range.to ? range.from : `${range.from} → ${range.to}`);
 
     // Group report entries + their customer payouts per employee
     const cpByEntry = {};
@@ -378,9 +382,9 @@ async function tabReports(body) {
       </div>`).join('') || '<div class="muted">No payouts in range.</div>';
 
     body.innerHTML = storeBarHtml() + `
-    <div class="card"><h2>Net Profit</h2>
-      <div class="figure"><span class="k">Net Profit (${esc(range.from)} → ${esc(range.to)})</span>
-      <span class="v ${netProfit < 0 ? 'neg' : 'pos'}">${money(netProfit)}</span></div>
+    <div class="card net-hero"><h2>Net Profit</h2>
+      <div class="net-hero-amount ${netProfit < 0 ? 'neg' : 'pos'}">${money(netProfit)}</div>
+      <div class="muted">${esc(rangeLabel)}</div>
     </div>
     <div class="card"><h2>Reports</h2>
       <div class="cal-row">
@@ -422,6 +426,12 @@ function centralTodayKey() {
 }
 function centralYearKey() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric' }).format(new Date());
+}
+// "2026-10-15" -> "October 2026" (for the month label under Net Profit)
+function monthNameLabel(ymd) {
+  const [y, m] = String(ymd).split('-');
+  const names = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  return `${names[Number(m) - 1] || ''} ${y}`.trim();
 }
 // Which report view is active: 'custom' | 'today' | 'month' | 'all'
 function reportMode() {
