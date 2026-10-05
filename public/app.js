@@ -773,19 +773,17 @@ async function mgrResetPw(id) {
 /* ---------- Team tab (admin) ---------- */
 async function tabTeamAdmin(body) {
   body.innerHTML = `
-  <div class="card"><h2>Stores</h2><div id="tm_err"></div>
-    <div id="storesList" class="muted">Loading…</div>
-    <div class="section-title">Add Store</div>
+  <div class="card"><h2>Add Store</h2><div id="tm_err"></div>
     <label>Name</label><input id="ns_name" placeholder="Store name">
     <label>Location / Details</label><input id="ns_loc" placeholder="Location">
     <button class="btn" onclick="addStore()">Add Store</button></div>
-  <div class="card"><h2>Users</h2><div id="usersList" class="muted">Loading…</div>
-    <div class="section-title">Create User</div>
+  <div class="card"><h2>Add User</h2>
     <label>Username</label><input id="nu_name" placeholder="username" autocomplete="off">
     <label>Password</label><input id="nu_pw" placeholder="min 4 chars, letters/numbers" autocomplete="new-password">
     <label>Role</label><select id="nu_role"><option value="employee">employee</option><option value="manager">manager</option><option value="admin">admin</option></select>
     <label>Assign Stores (managers: pick many)</label><div id="nu_stores"></div>
-    <button class="btn" onclick="addUser()">Create User</button></div>`;
+    <button class="btn" onclick="addUser()">Create User</button></div>
+  <div class="card"><h2>Users & Managers</h2><div id="usersList" class="muted">Loading…</div></div>`;
   await loadTeamAdmin();
 }
 async function loadTeamAdmin() {
@@ -794,14 +792,15 @@ async function loadTeamAdmin() {
       api('GET', '/api/admin/stores'), api('GET', '/api/admin/users'),
     ]);
     S.allStores = stores;
-    $('#storesList').innerHTML = stores.map((s) =>
-      `<div class="item"><b>${esc(s.name)}</b><div class="meta">${esc(s.location || '')}</div></div>`).join('')
-      || '<div class="muted">No stores yet.</div>';
     $('#nu_stores').innerHTML = stores.map((s) =>
       `<label class="checkline"><input type="checkbox" class="nu_store" value="${s.id}"> ${esc(s.name)}</label>`).join('');
-    $('#usersList').innerHTML = users.map((u) => `
-      <div class="item"><b>${esc(u.username)}</b> <span class="stamp-sm">${esc(u.role)}</span>
+    Tusers = users;
+    $('#usersList').innerHTML = Tusers.map((u) => `
+      <div class="item" id="tu_${u.id}">
+        <div class="net-row"><span><b>${esc(u.username)}</b> <span class="stamp-sm">${esc(u.role)}</span></span>
+        <button class="edit-ghost" onclick="showEditUser(${u.id})">Edit</button></div>
         <div class="meta">${u.stores.map((s) => esc(s.name)).join(', ') || 'no stores'}</div>
+        <div id="tuf_${u.id}"></div>
         <div class="row2" style="margin-top:6px">
           <input id="rpw_${u.id}" placeholder="New password">
           <button class="btn small" onclick="adminResetPw(${u.id})">Reset PW</button>
@@ -813,6 +812,29 @@ async function loadTeamAdmin() {
           ${u.id !== S.user.id ? `<button class="btn small danger" onclick="delUser(${u.id},'${esc(u.username)}')">Delete</button>` : ''}
         </div></div>`).join('') || '<div class="muted">No users.</div>';
   } catch (e) { $('#tm_err').innerHTML = `<div class="error">${esc(e.message)}</div>`; }
+}
+let Tusers = [];
+function showEditUser(id) {
+  const u = Tusers.find((x) => x.id === id);
+  const box = $('#tuf_' + id);
+  if (!u || !box) return;
+  box.innerHTML = `<div class="row2" style="margin-top:8px">
+      <div><label>Username</label><input id="teu_name_${id}" value="${esc(u.username)}" autocomplete="off"></div>
+      <div><label>New Password <span class="muted">(blank = keep)</span></label><input id="teu_pw_${id}" placeholder="min 4, A-Z 0-9" autocomplete="new-password"></div></div>
+    <div class="row2" style="margin-top:8px">
+      <button class="btn small" onclick="saveEditUser(${id})">Save</button>
+      <button class="btn small secondary" onclick="$('#tuf_${id}').innerHTML=''">Cancel</button>
+    </div><div id="teu_err_${id}"></div>`;
+}
+async function saveEditUser(id) {
+  const errBox = $('#teu_err_' + id);
+  try {
+    await api('PUT', '/api/admin/users/' + id, {
+      username: $('#teu_name_' + id).value.trim(),
+      password: $('#teu_pw_' + id).value,
+    });
+    await loadTeamAdmin();
+  } catch (e) { if (errBox) errBox.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
 }
 async function addStore() {
   try {

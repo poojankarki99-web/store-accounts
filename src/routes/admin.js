@@ -103,9 +103,23 @@ router.post('/users', async (req, res, next) => {
 router.put('/users/:id', async (req, res, next) => {
   const client = await pool.connect();
   try {
-    const { role, storeIds } = req.body || {};
+    const { role, storeIds, username, password } = req.body || {};
     if (role && !['admin', 'manager', 'employee'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
+    if (username !== undefined && username !== '' && !validUsername(username)) return res.status(400).json({ error: 'Invalid username' });
+    if (password !== undefined && password !== '' && !validPassword(password)) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters, letters and numbers only' });
+    }
     await client.query('BEGIN');
+    if (username) {
+      try {
+        await client.query('UPDATE users SET username = $1 WHERE id = $2', [String(username).trim(), req.params.id]);
+      } catch (e) {
+        await client.query('ROLLBACK');
+        if (e.code === '23505') return res.status(400).json({ error: 'Username already taken' });
+        throw e;
+      }
+    }
+    if (password) await client.query('UPDATE users SET password_hash = $1 WHERE id = $2', [await hashPassword(password), req.params.id]);
     if (role) await client.query('UPDATE users SET role = $1 WHERE id = $2', [role, req.params.id]);
     if (Array.isArray(storeIds)) {
       await client.query('DELETE FROM user_stores WHERE user_id = $1', [req.params.id]);
