@@ -14,6 +14,16 @@ function cleanStr(v, max = 200) {
   return typeof v === 'string' ? v.trim().slice(0, max) : '';
 }
 
+// Recalculate a report entry's net_amount = in_amount - sum(customer payouts)
+async function recalcEntryNet(entryId) {
+  const { rows } = await pool.query(
+    `SELECT re.in_amount, COALESCE((SELECT SUM(cp.amount) FROM customer_payouts cp WHERE cp.report_entry_id = re.id), 0) AS payout_total
+     FROM report_entries re WHERE re.id = $1`, [entryId]);
+  if (!rows[0]) return;
+  const net = Math.round((num(rows[0].in_amount) - num(rows[0].payout_total)) * 100) / 100;
+  await pool.query('UPDATE report_entries SET net_amount = $1 WHERE id = $2', [net, entryId]);
+}
+
 // ---------------- Employee: Report Entry ----------------
 // POST /api/entries/report
 router.post('/report', requireStoreAccess, async (req, res, next) => {
@@ -165,6 +175,29 @@ router.get('/report/:id/payouts', canEdit, async (req, res, next) => {
     res.json({ payouts: rows });
   } catch (e) { next(e); }
 });
+// Add a new customer payout to a report entry (from the edit form)
+router.post('/report/:id/payouts', canEdit, async (req, res, next) => {
+  try {
+    const { rows: er } = await pool.query('SELECT store_id FROM report_entries WHERE id = $1', [req.params.id]);
+    if (!er[0]) return res.status(404).json({ error: 'Entry not found' });
+    if (req.user.role !== 'admin') {
+      const { accessibleStoreIds } = require('../auth');
+      const ids = await accessibleStoreIds(req.user);
+      if (!ids.includes(er[0].store_id)) return res.status(403).json({ error: 'No access to this store' });
+    }
+    const name = cleanStr(req.body.customerName);
+    const game = cleanStr(req.body.gameName);
+    const amount = num(req.body.amount);
+    if (!name || !game) return res.status(400).json({ error: 'Each Customer Out row needs a name and a game name' });
+    if (amount < 0) return res.status(400).json({ error: 'Amounts cannot be negative' });
+    const { rows } = await pool.query(
+      'INSERT INTO customer_payouts (report_entry_id, customer_name, game_name, amount) VALUES ($1,$2,$3,$4) RETURNING *',
+      [req.params.id, name, game, amount]
+    );
+    await recalcEntryNet(req.params.id);
+    res.status(201).json({ payout: rows[0] });
+  } catch (e) { next(e); }
+});
 router.put('/customer-payout/:id', canEdit, async (req, res, next) => {
   try {
     const { rows } = await pool.query(
@@ -186,6 +219,7 @@ router.put('/customer-payout/:id', canEdit, async (req, res, next) => {
       table: 'customer_payouts', id: cur.id, entryType: 'customer_payout',
       changes, current: cur, editedBy: req.user.id,
     });
+    if (changes.amount !== undefined) await recalcEntryNet(cur.report_entry_id);
     res.json({ ok: true, ...r });
   } catch (e) { next(e); }
 });

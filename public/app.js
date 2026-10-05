@@ -688,7 +688,8 @@ async function showEditEntry(id) {
       <div style="margin-top:8px"><label>Employee</label><select id="hee_emp_${id}">
           ${emps.map((x) => `<option value="${x.id}" ${x.id === e.user_id ? 'selected' : ''}>${esc(x.username)}</option>`).join('')}
         </select></div>
-      ${payoutRows ? `<div class="section-title" style="margin-top:10px">Customer Out (edit amounts)</div><div id="hee_payouts_${id}">${payoutRows}</div>` : ''}
+      ${payoutRows ? `<div class="section-title" style="margin-top:10px">Customer Out (edit amounts)</div><div id="hee_payouts_${id}">${payoutRows}</div>` : `<div class="section-title" style="margin-top:10px">Customer Out</div><div id="hee_payouts_${id}"></div>`}
+      <button class="btn small secondary" onclick="addEditPayoutRow(${id})">+ Add More</button>
       <div class="row2" style="margin-top:8px">
         <button class="btn small" onclick="saveEditEntry(${id})">Save</button>
         <button class="btn small secondary" onclick="$('#hef_${id}').innerHTML=''">Cancel</button>
@@ -703,19 +704,38 @@ async function saveEditEntry(id) {
       userId: Number($('#hee_emp_' + id).value),
       entryDate: $('#hee_date_' + id).value,
     });
-    // Save any edited customer payout rows
+    // Save customer payout rows: update existing, create new ones
     const box = $('#hee_payouts_' + id);
     if (box) {
       for (const row of box.querySelectorAll('.payout-row')) {
-        await api('PUT', '/api/entries/customer-payout/' + row.dataset.pid, {
+        const data = {
           customerName: row.querySelector('.hee_pname').value,
           gameName: row.querySelector('.hee_pgame').value,
           amount: row.querySelector('.hee_pamt').value,
-        });
+        };
+        if (row.dataset.new === '1') {
+          // Skip empty new rows
+          if (!data.customerName.trim() && !data.gameName.trim() && !data.amount) continue;
+          await api('POST', '/api/entries/report/' + id + '/payouts', data);
+        } else {
+          await api('PUT', '/api/entries/customer-payout/' + row.dataset.pid, data);
+        }
       }
     }
     render();
   } catch (e) { if (errBox) errBox.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
+}
+function addEditPayoutRow(id) {
+  const box = $('#hee_payouts_' + id);
+  if (!box) return;
+  box.insertAdjacentHTML('beforeend', `
+    <div class="payout-row" data-new="1">
+      <div class="row2">
+        <div><label>Name</label><input class="hee_pname" placeholder="Name"></div>
+        <div><label>Game</label><input class="hee_pgame" placeholder="Game"></div>
+      </div>
+      <div><label>Amount</label><input class="hee_pamt" type="number" step="0.01" min="0" placeholder="0.00"></div>
+    </div>`);
 }
 async function saveCut(peId) {
   const v = $('#cut_' + peId).value;
