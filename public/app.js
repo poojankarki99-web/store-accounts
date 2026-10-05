@@ -551,8 +551,8 @@ function entryRowsHtml(d) {
       const net = Math.round((Number(e.in_amount) - out) * 100) / 100;
       return `<div class="item" id="he_${e.id}">
         <div><b>${esc(e.username)}</b> — IN: <b>${money(e.in_amount)}</b> · Out: <b>${money(out)}</b></div>
-        <div>Employee Net: <b class="${net < 0 ? 'neg' : 'pos'}">${money(net)}</b></div>
-        ${canEdit ? `<div style="margin-top:6px"><button class="btn small" onclick="showEditEntry(${e.id})">Edit</button></div><div id="hef_${e.id}"></div>` : ''}
+        <div>Employee Net: <b class="${net < 0 ? 'neg' : 'pos'}">${money(net)}</b>${canEdit ? ` <button class="btn small" onclick="showEditEntry(${e.id})">Edit</button>` : ''}</div>
+        ${canEdit ? `<div id="hef_${e.id}"></div>` : ''}
       </div>`;
     }).join('')}`;
   }).join('') || '<div class="muted">No entries in this period.</div>';
