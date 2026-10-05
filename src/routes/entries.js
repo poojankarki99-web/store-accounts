@@ -5,7 +5,7 @@ const { pool } = require('../db');
 const { requireAuth, requireRole, requireStoreAccess } = require('../auth');
 const { applyAuditedUpdate } = require('../audit');
 const { num, storeTotals } = require('../storeMath');
-const { centralDateKey, formatBoth } = require('../time');
+const { centralDateKey, formatBoth, isValidDateKey } = require('../time');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -129,6 +129,11 @@ router.put('/report/:id', canEdit, async (req, res, next) => {
         if (!shared[0]) return res.status(403).json({ error: 'Employee is not in your stores' });
       }
       changes.user_id = newUserId;
+    }
+    // Move entry to a different date
+    if (req.body.entryDate !== undefined) {
+      if (!isValidDateKey(req.body.entryDate)) return res.status(400).json({ error: 'Invalid date' });
+      changes.entry_date = req.body.entryDate;
     }
     const newIn = changes.in_amount !== undefined ? changes.in_amount : num(cur.in_amount);
     // Net = IN minus this entry's Customer Payouts (generic "Out" is retired)

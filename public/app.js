@@ -578,9 +578,10 @@ async function showEditEntry(id) {
     const emps = await getEmployeesForTransfer();
     box.innerHTML = `<div class="row2" style="margin-top:8px">
         <div><label>IN</label><input type="number" id="hee_in_${id}" value="${esc(e.in_amount)}" step="0.01" min="0"></div>
-        <div><label>Employee</label><select id="hee_emp_${id}">
+        <div><label>Date</label><input type="date" id="hee_date_${id}" value="${esc(e.entry_date)}"></div></div>
+      <div style="margin-top:8px"><label>Employee</label><select id="hee_emp_${id}">
           ${emps.map((x) => `<option value="${x.id}" ${x.id === e.user_id ? 'selected' : ''}>${esc(x.username)}</option>`).join('')}
-        </select></div></div>
+        </select></div>
       <div class="row2" style="margin-top:8px">
         <button class="btn small" onclick="saveEditEntry(${id})">Save</button>
         <button class="btn small secondary" onclick="$('#hef_${id}').innerHTML=''">Cancel</button>
@@ -593,6 +594,7 @@ async function saveEditEntry(id) {
     await api('PUT', '/api/entries/report/' + id, {
       inAmount: $('#hee_in_' + id).value,
       userId: Number($('#hee_emp_' + id).value),
+      entryDate: $('#hee_date_' + id).value,
     });
     render();
   } catch (e) { if (errBox) errBox.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
