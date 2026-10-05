@@ -116,6 +116,20 @@ router.put('/report/:id', canEdit, async (req, res, next) => {
     const changes = {};
     if (req.body.inAmount !== undefined) changes.in_amount = num(req.body.inAmount);
     if (req.body.hoursWorkedMinutes !== undefined) changes.hours_worked_minutes = Math.max(0, parseInt(req.body.hoursWorkedMinutes, 10) || 0);
+    // Transfer entry to another employee
+    if (req.body.userId !== undefined) {
+      const newUserId = Number(req.body.userId);
+      const { rows: uRows } = await pool.query('SELECT id, role FROM users WHERE id = $1', [newUserId]);
+      const target = uRows[0];
+      if (!target || target.role !== 'employee') return res.status(400).json({ error: 'Pick a valid employee' });
+      if (req.user.role === 'manager') {
+        const { rows: shared } = await pool.query(
+          `SELECT 1 FROM user_stores a JOIN user_stores b ON a.store_id = b.store_id
+           WHERE a.user_id = $1 AND b.user_id = $2 LIMIT 1`, [req.user.id, newUserId]);
+        if (!shared[0]) return res.status(403).json({ error: 'Employee is not in your stores' });
+      }
+      changes.user_id = newUserId;
+    }
     const newIn = changes.in_amount !== undefined ? changes.in_amount : num(cur.in_amount);
     // Net = IN minus this entry's Customer Payouts (generic "Out" is retired)
     const { rows: cpSum } = await pool.query(

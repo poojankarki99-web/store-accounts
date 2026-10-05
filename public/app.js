@@ -532,21 +532,70 @@ function withdrawnDetailHtml(d) {
       ${pe.rows.map((r) => `<div class="stamp-sm">${esc(r.name)} · ${esc(r.tag_email)} · ${money(r.amount)}</div>`).join('')}
     </div>`).join('');
 }
+let Hentries = []; // cache for edit forms
 function entryRowsHtml(d) {
+  Hentries = d.entries || [];
+  const canEdit = S.user.role === 'admin' || S.user.role === 'manager';
   const groups = {};
-  for (const e of d.entries) {
+  for (const e of Hentries) {
     (groups[e.entry_date] = groups[e.entry_date] || []).push(e);
   }
-  return Object.keys(groups).sort().reverse().map((dt) => `
-    <div class="section-title">${esc(dt)}</div>
+  return Object.keys(groups).sort().reverse().map((dt) => {
+    const dayIn = groups[dt].reduce((s, e) => s + Number(e.in_amount), 0);
+    const dayOut = groups[dt].reduce((s, e) => s + (Number(e.cust_payout_total) || 0), 0);
+    const dayNet = Math.round((dayIn - dayOut) * 100) / 100;
+    return `
+    <div class="emp-name">${esc(dt)} <span class="stamp-sm">(Net Profit: ${money(dayNet)})</span></div>
     ${groups[dt].map((e) => {
       const out = Number(e.cust_payout_total) || 0;
       const net = Math.round((Number(e.in_amount) - out) * 100) / 100;
-      return `<div class="item">
+      return `<div class="item" id="he_${e.id}">
         <div><b>${esc(e.username)}</b> — IN: <b>${money(e.in_amount)}</b> · Out: <b>${money(out)}</b></div>
         <div>Employee Net: <b class="${net < 0 ? 'neg' : 'pos'}">${money(net)}</b></div>
+        ${canEdit ? `<div style="margin-top:6px"><button class="btn small" onclick="showEditEntry(${e.id})">Edit</button></div><div id="hef_${e.id}"></div>` : ''}
       </div>`;
-    }).join('')}`).join('') || '<div class="muted">No entries in this period.</div>';
+    }).join('')}`;
+  }).join('') || '<div class="muted">No entries in this period.</div>';
+}
+let HempCache = null;
+async function getEmployeesForTransfer() {
+  if (HempCache) return HempCache;
+  if (S.user.role === 'admin') {
+    const { users } = await api('GET', '/api/admin/users');
+    HempCache = users.filter((u) => u.role === 'employee');
+  } else {
+    const { employees } = await api('GET', '/api/manager/employees');
+    HempCache = employees;
+  }
+  return HempCache;
+}
+async function showEditEntry(id) {
+  const box = $('#hef_' + id);
+  const e = Hentries.find((x) => x.id === id);
+  if (!e || !box) return;
+  box.innerHTML = '<div class="muted">Loading…</div>';
+  try {
+    const emps = await getEmployeesForTransfer();
+    box.innerHTML = `<div class="row2" style="margin-top:8px">
+        <div><label>IN</label><input type="number" id="hee_in_${id}" value="${esc(e.in_amount)}" step="0.01" min="0"></div>
+        <div><label>Employee</label><select id="hee_emp_${id}">
+          ${emps.map((x) => `<option value="${x.id}" ${x.id === e.user_id ? 'selected' : ''}>${esc(x.username)}</option>`).join('')}
+        </select></div></div>
+      <div class="row2" style="margin-top:8px">
+        <button class="btn small" onclick="saveEditEntry(${id})">Save</button>
+        <button class="btn small secondary" onclick="$('#hef_${id}').innerHTML=''">Cancel</button>
+      </div><div id="hee_err_${id}"></div>`;
+  } catch (err) { box.innerHTML = `<div class="error">${esc(err.message)}</div>`; }
+}
+async function saveEditEntry(id) {
+  const errBox = $('#hee_err_' + id);
+  try {
+    await api('PUT', '/api/entries/report/' + id, {
+      inAmount: $('#hee_in_' + id).value,
+      userId: Number($('#hee_emp_' + id).value),
+    });
+    render();
+  } catch (e) { if (errBox) errBox.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
 }
 async function saveCut(peId) {
   const v = $('#cut_' + peId).value;
