@@ -42,14 +42,14 @@ router.get('/dashboard', async (req, res, next) => {
 
     // IN entries (top section)
     const inQ = await pool.query(
-      `SELECT re.*, u.username, s.name AS store_name FROM report_entries re
+      `SELECT re.*, u.username, u.role AS user_role, s.name AS store_name FROM report_entries re
        JOIN users u ON u.id = re.user_id JOIN stores s ON s.id = re.store_id
        WHERE re.store_id = ANY($1) AND re.entry_date >= $2 AND re.entry_date <= $3
        ORDER BY re.entry_date DESC, re.id DESC`, [ids, from, to]);
 
     // Customer Out rows (count as expenses in net)
     const cpQ = await pool.query(
-      `SELECT cp.*, re.entry_date, re.store_id, re.created_at, s.name AS store_name, u.username FROM customer_payouts cp
+      `SELECT cp.*, re.entry_date, re.store_id, re.created_at, s.name AS store_name, u.username, u.role AS user_role FROM customer_payouts cp
        JOIN report_entries re ON re.id = cp.report_entry_id
        JOIN stores s ON s.id = re.store_id
        JOIN users u ON u.id = re.user_id
@@ -189,7 +189,7 @@ router.get('/holding', async (req, res, next) => {
 
     // Report entries for the period, each with its customer payout (out) total
     const periodEntries = await pool.query(
-      `SELECT re.*, u.username,
+      `SELECT re.*, u.username, u.role AS user_role,
               COALESCE((SELECT SUM(cp.amount) FROM customer_payouts cp WHERE cp.report_entry_id = re.id), 0) AS cust_payout_total
        FROM report_entries re JOIN users u ON u.id = re.user_id
        WHERE re.store_id = $1 AND re.entry_date >= $2 AND re.entry_date <= $3 ORDER BY re.entry_date DESC`,
@@ -293,7 +293,7 @@ router.get('/entries', async (req, res, next) => {
     }
 
     const { rows } = await pool.query(
-      `SELECT re.*, u.username, s.name AS store_name FROM report_entries re
+      `SELECT re.*, u.username, u.role AS user_role, s.name AS store_name FROM report_entries re
        JOIN users u ON u.id = re.user_id JOIN stores s ON s.id = re.store_id
        WHERE re.store_id = ANY($1) AND re.entry_date >= $2 AND re.entry_date <= $3
        ORDER BY re.entry_date DESC, re.id DESC LIMIT 500`, [ids, from, to]);

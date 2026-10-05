@@ -7,6 +7,7 @@ const S = {
   selected: null,      // null | 'all' | storeId
   tab: 'reports',
   from: '', to: '',
+  empView: 'home',     // manager Emp Entry tab: home | reportEntry | payoutEntry
 };
 
 const $ = (sel, el) => (el || document).querySelector(sel);
@@ -66,6 +67,12 @@ async function logout() {
 
 function go(view) {
   S.view = view;
+  render();
+}
+// Back/home from an entry form: manager Emp Entry tab vs employee portal
+function entryGoHome() {
+  if (S.user.role === 'manager' && S.tab === 'empentry') S.empView = 'home';
+  else S.view = 'home';
   render();
 }
 
@@ -169,7 +176,7 @@ function reportEntryForm() {
     <button class="btn secondary" onclick="addCustRow()">+ Add More</button>
     <div class="final-notice">All Entries are Final and cannot be edited</div>
     <button class="btn" onclick="submitReport()">Submit Entry</button>
-    <button class="btn secondary" onclick="go('home')">Back</button>
+    <button class="btn secondary" onclick="entryGoHome()">Back</button>
   </div>`;
 }
 
@@ -205,7 +212,7 @@ async function submitReport() {
       inAmount: $('#f_in').value,
       customerPayouts: rows,
     });
-    S.view = 'home'; render();
+    entryGoHome();
     alert('Entry submitted.');
   } catch (e) { errBox.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
 }
@@ -217,7 +224,7 @@ function payoutEntryForm() {
     <button class="btn secondary" onclick="addPayRow()">+ Add More</button>
     <div class="final-notice">All Entries are Final and cannot be edited</div>
     <button class="btn" onclick="submitPayout()">Submit Entry</button>
-    <button class="btn secondary" onclick="go('home')">Back</button>
+    <button class="btn secondary" onclick="entryGoHome()">Back</button>
   </div>`;
 }
 
@@ -259,15 +266,21 @@ async function doChangePw() {
   } catch (e) { errBox.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
 }
 
+function entryUserLabel(e) {
+  if (!e) return 'Unknown';
+  return e.user_role === 'manager' ? 'Man/Emp' : (e.username || 'Unknown');
+}
 /* ---------------- Staff (admin / manager) ---------------- */
 function tabsHtml() {
-  const tabs = [
+  const tabs = [];
+  if (S.user.role === 'manager') tabs.push(['empentry', 'Emp Entry']);
+  tabs.push(
     ['reports', 'Reports'],
     ['holding', 'Holding'],
     ['expenses', 'Expenses'],
     ['cih', 'CIH Report'],
     ['team', 'Team'],
-  ];
+  );
   if (S.user.role === 'admin') tabs.push(['alerts', 'Alerts'], ['audit', 'Edit Log']);
   return `<div class="tabs">${tabs.map(([k, label]) =>
     `<button class="${S.tab === k ? 'active' : ''}" onclick="setTab('${k}')">${label}</button>`).join('')}</div>`;
@@ -308,13 +321,31 @@ function renderTab() {
       <button class="btn secondary" onclick="S.selected=null;render()">Choose Store</button></div>`;
     return;
   }
-  ({ reports: tabReports, holding: tabHolding, expenses: tabExpenses, cih: tabCih, team: tabTeam, alerts: tabAlerts, audit: tabAudit })[S.tab](body);
+  ({ reports: tabReports, holding: tabHolding, expenses: tabExpenses, cih: tabCih, team: tabTeam, alerts: tabAlerts, audit: tabAudit, empentry: tabEmpEntry })[S.tab](body);
 }
 
 function storeBarHtml() {
   const label = S.selected === 'all' ? 'All Stores' : storeName(S.selected);
   return `<div class="card"><div class="figure"><span class="k">Viewing</span><span class="v" style="font-size:16px">${esc(label)}</span></div>
     <button class="btn secondary small" onclick="S.selected=null;render()">Change Store</button></div>`;
+}
+
+/* ---------- Emp Entry tab (manager) — same as the employee entry portal ---------- */
+async function tabEmpEntry(body) {
+  if (S.empView === 'reportEntry') {
+    body.innerHTML = reportEntryForm();
+    initReportForm();
+    return;
+  }
+  if (S.empView === 'payoutEntry') {
+    body.innerHTML = payoutEntryForm();
+    initPayoutForm();
+    return;
+  }
+  body.innerHTML = `<div class="card"><h2>Emp Entry</h2>
+    <div class="muted">Make an entry as an employee. It counts as done by you but shows as <b>Man/Emp</b> in reports.</div>
+    <button class="big-choice" onclick="S.empView='reportEntry';render()">📝 Report Entry</button>
+    <button class="big-choice" onclick="S.empView='payoutEntry';render()">💸 Payout Entry</button></div>`;
 }
 
 /* ---------- Reports tab ---------- */
@@ -339,7 +370,7 @@ async function tabReports(body) {
     }
     const byEmp = {};
     for (const e of incomeExpense.inSection.entries) {
-      const u = e.username || 'Unknown';
+      const u = entryUserLabel(e);
       const g = (byEmp[u] = byEmp[u] || { inTotal: 0, outTotal: 0, entries: [], outRows: [] });
       g.entries.push(e);
       g.inTotal = Math.round((g.inTotal + Number(e.in_amount)) * 100) / 100;
@@ -352,11 +383,11 @@ async function tabReports(body) {
       const g = byEmp[u];
       const net = Math.round((g.inTotal - g.outTotal) * 100) / 100;
       const entryHtml = g.entries.map((e) =>
-        `<div class="item">${stampHtml(e.created_at, e.username)}
+        `<div class="item">${stampHtml(e.created_at, entryUserLabel(e))}
           <div>IN: <b>${money(e.in_amount)}</b> · Net: <b>${money(e.net_amount)}</b></div>
         </div>`).join('');
       const outDetailHtml = g.outRows.map((c) =>
-        `<div class="item">${stampHtml(c.created_at, c.username)}
+        `<div class="item">${stampHtml(c.created_at, entryUserLabel(c))}
           <div><b>${money(c.amount)}</b> · ${esc(c.customer_name)} · <span class="stamp-sm">${esc(c.game_name)}</span></div>
         </div>`).join('') || '<div class="muted">None.</div>';
       return `<div class="emp-name">${esc(u)}</div>
@@ -579,7 +610,7 @@ function entryRowsHtml(d) {
       const out = Number(e.cust_payout_total) || 0;
       const net = Math.round((Number(e.in_amount) - out) * 100) / 100;
       return `<div class="item" id="he_${e.id}">
-        <div><b>${esc(e.username)}</b> — IN: <b>${money(e.in_amount)}</b> · Out: <b>${money(out)}</b></div>
+        <div><b>${esc(entryUserLabel(e))}</b> — IN: <b>${money(e.in_amount)}</b> · Out: <b>${money(out)}</b></div>
         <div class="net-row"><span>Employee Net: <b class="${net < 0 ? 'neg' : 'pos'}">${money(net)}</b></span>${canEdit ? `<button class="edit-ghost" onclick="showEditEntry(${e.id})">Edit</button>` : ''}</div>
         ${canEdit ? `<div id="hef_${e.id}"></div>` : ''}
       </div>`;
