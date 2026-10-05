@@ -731,7 +731,7 @@ async function tabCih(body) {
 async function tabTeam(body) {
   if (S.user.role === 'admin') return tabTeamAdmin(body);
   const stores = myStores();
-  body.innerHTML = storeBarHtml() + `<div class="card"><h2>Team — Create Employee</h2><div id="t_err"></div>
+  body.innerHTML = `<div class="card"><h2>Team — Create Employee</h2><div id="t_err"></div>
     <label>Username</label><input id="ne_user" placeholder="username" autocomplete="off">
     <label>Password</label><input id="ne_pass" placeholder="min 4 chars, letters/numbers" autocomplete="new-password">
     <label>Assign Stores</label><div>${stores.map((s) =>
@@ -772,7 +772,7 @@ async function mgrResetPw(id) {
 
 /* ---------- Team tab (admin) ---------- */
 async function tabTeamAdmin(body) {
-  body.innerHTML = storeBarHtml() + `
+  body.innerHTML = `
   <div class="card"><h2>Stores</h2><div id="tm_err"></div>
     <div id="storesList" class="muted">Loading…</div>
     <div class="section-title">Add Store</div>
