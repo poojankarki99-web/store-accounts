@@ -82,11 +82,12 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); bor
 .emp-totals .v { display: block; font-size: 17px; font-weight: 700; margin-top: 2px; }
 /* Holding hero boxes: side-by-side like Net Profit display */
 .hero-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px; }
-.hero-box { text-align: center; background: #f8fafc; border-radius: 14px; padding: 16px 8px; }
-.hero-box h3 { margin: 0 0 4px; font-size: 14px; font-weight: 700; }
-.hero-box .amount { font-size: 32px; font-weight: 800; letter-spacing: .02em; }
-.hero-box .amount.neg { color: var(--danger); }
-.hero-box .amount.pos { color: var(--brand-dark); }
+.hero-box { text-align: center; border-radius: 14px; padding: 16px 8px; }
+.hero-box h3 { margin: 0 0 4px; font-size: 14px; font-weight: 700; color: #fff; }
+.hero-box .amount { font-size: 32px; font-weight: 800; letter-spacing: .02em; color: #fff; }
+.hero-box .muted { color: rgba(255,255,255,.85); }
+.hero-box.neg { background: var(--danger); }
+.hero-box.pos { background: var(--brand-dark); }
 /* Deleted employee names: red, block, bold */
 .deleted-name { color: var(--danger); font-weight: 800; display: block; }
 .stamp-toggle {

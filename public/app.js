@@ -589,10 +589,10 @@ async function tabHolding(body) {
     body.innerHTML = storeBarHtml() + `
     <div class="card">
       <div class="hero-pair">
-        <div class="hero-box"><h3>Holding Balance</h3>
-          <div class="amount ${d.holdingBalance < 0 ? 'neg' : 'pos'}">${money(d.holdingBalance)}</div>
+        <div class="hero-box ${d.holdingBalance < 0 ? 'neg' : 'pos'}"><h3>Holding Balance</h3>
+          <div class="amount">${money(d.holdingBalance)}</div>
           <div class="muted">${esc(label)}</div></div>
-        <div class="hero-box"><h3>Total Withdrawn</h3>
+        <div class="hero-box pos"><h3>Total Withdrawn</h3>
           <div class="amount">${money(d.totalWithdrawn)}</div>
           <div class="muted">${esc(label)}</div></div>
       </div>
@@ -634,7 +634,7 @@ async function holdingMonthBrowserHtml() {
     return `<button class="btn ${HselMonth === mk ? '' : 'secondary'} small" onclick="HselMonth='${mk}';render()">${n}</button>`;
   }).join('');
   return `
-    <div class="card"><h2>Report Entries</h2>
+    <div class="card"><h2>Entry Report</h2>
       <div class="row2">
         <div><label>Year</label><input type="number" id="h_year" value="${esc(Hyear)}" min="2000" max="2100" step="1"></div>
         <div><label>&nbsp;</label><button class="btn small" onclick="Hyear=$('#h_year').value;HselMonth=Hyear+'-01';render()">Show</button></div>
