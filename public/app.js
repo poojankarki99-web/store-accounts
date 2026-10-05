@@ -509,10 +509,36 @@ async function tabHolding(body) {
     <div class="card"><h2>Report With Details</h2>
       <div class="section-title">With Drawn Amount</div>${withdrawnDetailHtml(d) || '<div class="muted">None.</div>'}
     </div>
-    <div class="card"><h2>Report Entries — ${esc(label)}</h2>${entryRowsHtml(d)}</div>`;
+    ${await holdingMonthBrowserHtml()}`;
   } catch (e) {
     body.innerHTML = storeBarHtml() + `<div class="card"><div class="error">${esc(e.message)}</div></div>`;
   }
+}
+// Month browser for Report Entries: pick a year, see all 12 months, tap a month for its report
+let Hyear = '', HselMonth = '';
+function centralYear() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric' }).format(new Date());
+}
+async function holdingMonthBrowserHtml() {
+  if (!Hyear) Hyear = centralYear();
+  if (!HselMonth) { HselMonth = centralTodayKey().slice(0, 7); Hyear = HselMonth.split('-')[0]; }
+  const q = new URLSearchParams({ store: S.selected, mode: 'month', month: HselMonth });
+  const md = await api('GET', '/api/reports/holding?' + q.toString());
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthBtns = monthNames.map((n, i) => {
+    const mk = `${Hyear}-${String(i + 1).padStart(2, '0')}`;
+    return `<button class="btn ${HselMonth === mk ? '' : 'secondary'} small" onclick="HselMonth='${mk}';render()">${n}</button>`;
+  }).join('');
+  return `
+    <div class="card"><h2>Report Entries</h2>
+      <div class="row2">
+        <div><label>Year</label><input type="number" id="h_year" value="${esc(Hyear)}" min="2000" max="2100" step="1"></div>
+        <div><label>&nbsp;</label><button class="btn small" onclick="Hyear=$('#h_year').value;HselMonth=Hyear+'-01';render()">Show</button></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0">${monthBtns}</div>
+      <div class="section-title">${esc(monthNameLabel(HselMonth + '-01'))}</div>
+      ${entryRowsHtml(md)}
+    </div>`;
 }
 function payoutDetailHtml(d, canCut) {
   return d.details.map((pe) => `
@@ -538,7 +564,8 @@ function entryRowsHtml(d) {
   const canEdit = S.user.role === 'admin' || S.user.role === 'manager';
   const groups = {};
   for (const e of Hentries) {
-    (groups[e.entry_date] = groups[e.entry_date] || []).push(e);
+    const dkey = String(e.entry_date).slice(0, 10); // YYYY-MM-DD only, no time
+    (groups[dkey] = groups[dkey] || []).push(e);
   }
   return Object.keys(groups).sort().reverse().map((dt) => {
     const dayIn = groups[dt].reduce((s, e) => s + Number(e.in_amount), 0);
