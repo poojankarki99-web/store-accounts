@@ -187,9 +187,11 @@ router.get('/holding', async (req, res, next) => {
       });
     }
 
-    // Report entries for the period
+    // Report entries for the period, each with its customer payout (out) total
     const periodEntries = await pool.query(
-      `SELECT re.*, u.username FROM report_entries re JOIN users u ON u.id = re.user_id
+      `SELECT re.*, u.username,
+              COALESCE((SELECT SUM(cp.amount) FROM customer_payouts cp WHERE cp.report_entry_id = re.id), 0) AS cust_payout_total
+       FROM report_entries re JOIN users u ON u.id = re.user_id
        WHERE re.store_id = $1 AND re.entry_date >= $2 AND re.entry_date <= $3 ORDER BY re.entry_date DESC`,
       [storeId, start, end]);
 

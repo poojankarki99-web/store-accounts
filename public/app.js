@@ -533,10 +533,20 @@ function withdrawnDetailHtml(d) {
     </div>`).join('');
 }
 function entryRowsHtml(d) {
-  return d.entries.map((e) => `
-    <div class="item">${stampHtml(e.created_at, e.username)}
-      <div>IN: <b>${money(e.in_amount)}</b> · Net: <b>${money(e.net_amount)}</b></div>
-    </div>`).join('') || '<div class="muted">No entries in this period.</div>';
+  const groups = {};
+  for (const e of d.entries) {
+    (groups[e.entry_date] = groups[e.entry_date] || []).push(e);
+  }
+  return Object.keys(groups).sort().reverse().map((dt) => `
+    <div class="section-title">${esc(dt)}</div>
+    ${groups[dt].map((e) => {
+      const out = Number(e.cust_payout_total) || 0;
+      const net = Math.round((Number(e.in_amount) - out) * 100) / 100;
+      return `<div class="item">
+        <div><b>${esc(e.username)}</b> — IN: <b>${money(e.in_amount)}</b> · Out: <b>${money(out)}</b></div>
+        <div>Employee Net: <b class="${net < 0 ? 'neg' : 'pos'}">${money(net)}</b></div>
+      </div>`;
+    }).join('')}`).join('') || '<div class="muted">No entries in this period.</div>';
 }
 async function saveCut(peId) {
   const v = $('#cut_' + peId).value;
