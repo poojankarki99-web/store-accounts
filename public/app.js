@@ -679,7 +679,7 @@ function weekdayOf(ymd) {
 let Hentries = []; // cache for edit forms
 function entryRowsHtml(d) {
   Hentries = d.entries || [];
-  const canEdit = S.user.role === 'admin' || S.user.role === 'manager';
+  const canEdit = S.user.role === 'admin' || (S.user.role === 'manager' && S.user.can_edit_entries !== false);
   const groups = {};
   for (const e of Hentries) {
     const dkey = String(e.entry_date).slice(0, 10); // YYYY-MM-DD only, no time
@@ -1005,6 +1005,7 @@ function showEditUser(id) {
   box.innerHTML = `<div class="row2" style="margin-top:8px">
       <div><label>Username</label><input id="teu_name_${id}" value="${esc(u.username)}" autocomplete="off"></div>
       <div><label>New Password <span class="muted">(blank = keep)</span></label><input id="teu_pw_${id}" placeholder="min 4, A-Z 0-9" autocomplete="new-password"></div></div>
+    ${u.role === 'manager' ? `<div style="margin-top:8px"><label class="checkline"><input type="checkbox" id="teu_canedit_${id}" ${u.can_edit_entries !== false ? 'checked' : ''}> Can edit entries</label></div>` : ''}
     <div class="row2" style="margin-top:8px">
       <button class="btn small" onclick="saveEditUser(${id})">Save</button>
       <button class="btn small secondary" onclick="$('#tuf_${id}').innerHTML=''">Cancel</button>
@@ -1012,11 +1013,17 @@ function showEditUser(id) {
 }
 async function saveEditUser(id) {
   const errBox = $('#teu_err_' + id);
+  const u = Tusers.find((x) => x.id === id);
   try {
-    await api('PUT', '/api/admin/users/' + id, {
+    const payload = {
       username: $('#teu_name_' + id).value.trim(),
       password: $('#teu_pw_' + id).value,
-    });
+    };
+    if (u && u.role === 'manager') {
+      const cb = $('#teu_canedit_' + id);
+      if (cb) payload.canEditEntries = cb.checked;
+    }
+    await api('PUT', '/api/admin/users/' + id, payload);
     await loadTeamAdmin();
   } catch (e) { if (errBox) errBox.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
 }

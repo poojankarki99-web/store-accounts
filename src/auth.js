@@ -51,7 +51,7 @@ function requireAuth(req, res, next) {
   if (!req.session || !req.session.userId) {
     return res.status(401).json({ error: 'Not signed in' });
   }
-  pool.query('SELECT id, username, role FROM users WHERE id = $1', [req.session.userId])
+  pool.query('SELECT id, username, role, COALESCE(can_edit_entries, TRUE) AS can_edit_entries FROM users WHERE id = $1', [req.session.userId])
     .then(({ rows }) => {
       if (!rows[0]) return res.status(401).json({ error: 'Session user no longer exists' });
       req.user = rows[0];

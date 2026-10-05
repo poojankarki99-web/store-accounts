@@ -111,7 +111,13 @@ router.post('/payout', requireStoreAccess, async (req, res, next) => {
 });
 
 // ---------------- Edits (admin + manager; every change is audited) ----------------
-const canEdit = requireRole('admin', 'manager');
+const canEdit = (req, res, next) => {
+  if (!req.user) return res.status(401).json({ error: 'Not signed in' });
+  if (req.user.role === 'admin') return next();
+  // Managers need the per-manager edit permission enabled by admin
+  if (req.user.role === 'manager' && req.user.can_edit_entries !== false) return next();
+  return res.status(403).json({ error: 'Editing is not enabled for your account' });
+};
 
 router.put('/report/:id', canEdit, async (req, res, next) => {
   try {

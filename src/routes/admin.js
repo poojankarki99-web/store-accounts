@@ -59,7 +59,7 @@ router.delete('/stores/:id', async (req, res, next) => {
 // ---------- Users ----------
 router.get('/users', async (req, res, next) => {
   try {
-    const { rows } = await pool.query(`SELECT id, username, role, created_at, is_deleted FROM users WHERE NOT COALESCE(is_deleted, FALSE) ORDER BY role, username`);
+    const { rows } = await pool.query(`SELECT id, username, role, created_at, is_deleted, COALESCE(can_edit_entries, TRUE) AS can_edit_entries FROM users WHERE NOT COALESCE(is_deleted, FALSE) ORDER BY role, username`);
     const users = [];
     for (const u of rows) {
       users.push({ ...u, stores: await getUserStores(u.id) });
@@ -103,7 +103,7 @@ router.post('/users', async (req, res, next) => {
 router.put('/users/:id', async (req, res, next) => {
   const client = await pool.connect();
   try {
-    const { role, storeIds, username, password } = req.body || {};
+    const { role, storeIds, username, password, canEditEntries } = req.body || {};
     if (role && !['admin', 'manager', 'employee'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
     if (username !== undefined && username !== '' && !validUsername(username)) return res.status(400).json({ error: 'Invalid username' });
     if (password !== undefined && password !== '' && !validPassword(password)) {
@@ -120,6 +120,7 @@ router.put('/users/:id', async (req, res, next) => {
       }
     }
     if (password) await client.query('UPDATE users SET password_hash = $1 WHERE id = $2', [await hashPassword(password), req.params.id]);
+    if (typeof canEditEntries === 'boolean') await client.query('UPDATE users SET can_edit_entries = $1 WHERE id = $2', [canEditEntries, req.params.id]);
     if (role) await client.query('UPDATE users SET role = $1 WHERE id = $2', [role, req.params.id]);
     if (Array.isArray(storeIds)) {
       await client.query('DELETE FROM user_stores WHERE user_id = $1', [req.params.id]);

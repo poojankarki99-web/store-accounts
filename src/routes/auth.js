@@ -26,7 +26,7 @@ router.post('/login', async (req, res, next) => {
       req.session.cookie.maxAge = 10 * 365 * 24 * 3600 * 1000; // ~10 years
     }
     const stores = await getUserStores(user.id);
-    res.json({ ok: true, user: { id: user.id, username: user.username, role: user.role, stores } });
+    res.json({ ok: true, user: { id: user.id, username: user.username, role: user.role, stores, can_edit_entries: user.can_edit_entries !== false } });
   } catch (e) { next(e); }
 });
 
@@ -43,7 +43,7 @@ router.post('/logout', requireAuth, (req, res, next) => {
 router.get('/me', requireAuth, async (req, res, next) => {
   try {
     const stores = await getUserStores(req.user.id);
-    res.json({ user: { id: req.user.id, username: req.user.username, role: req.user.role, stores } });
+    res.json({ user: { id: req.user.id, username: req.user.username, role: req.user.role, stores, can_edit_entries: req.user.can_edit_entries !== false } });
   } catch (e) { next(e); }
 });
 
