@@ -343,8 +343,11 @@ function renderTab() {
   const body = $('#tabbody');
   if (!body) return;
   if (S.view === 'changepw') { body.innerHTML = changePwForm(); return; }
-  // Admin Settings is global (Team, Edit Log, Deleted list) — no store selection needed
-  if (S.tab === 'settings' && S.user.role === 'admin') { tabSettings(body); return; }
+  // Admin Settings and Alerts are global — no store selection needed
+  if ((S.tab === 'settings' || S.tab === 'alerts') && S.user.role === 'admin') {
+    ({ settings: tabSettings, alerts: tabAlerts })[S.tab](body);
+    return;
+  }
   if (!S.selected) { body.innerHTML = storeSelectorHtml(); return; }
   if (S.tab === 'holding' && S.selected === 'all') {
     body.innerHTML = `<div class="card"><h2>Holding Balance</h2>
@@ -1095,7 +1098,7 @@ async function tabAlerts(body) {
     const { alerts } = await api('GET', '/api/admin/alerts');
     if (!alerts.length) { const b = $('#resolveAllBtn'); if (b) b.style.display = 'none'; }
     $('#al_list').innerHTML = alerts.map((a) => `
-      <div class="alert ${a.severity}" id="alert-${a.id}">${esc(a.text)}
+      <div class="alert ${a.severity}" id="alert-${a.id}">${a.store_name ? `<b>${esc(a.store_name)}</b> — ` : ''}${esc(a.text)}
         <div class="stamp-sm">${tzStampLine(a.timestamps)}</div>
         <button class="btn secondary small" onclick="resolveAlert(${a.id})">Resolved</button>
       </div>`).join('') || '<div class="muted">No edits yet.</div>';

@@ -208,8 +208,19 @@ router.get('/audit', async (req, res, next) => {
 router.get('/alerts', async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      `SELECT a.*, u.username AS edited_by_username, u.role AS edited_by_role
+      `SELECT a.*, u.username AS edited_by_username, u.role AS edited_by_role,
+              COALESCE(re_s.name, cp_s.name, pe_s.name, me_s.name) AS store_name
        FROM edit_audit a JOIN users u ON u.id = a.edited_by
+       LEFT JOIN report_entries re ON re.id = a.entry_id AND a.entry_type = 'report_entry'
+       LEFT JOIN stores re_s ON re_s.id = re.store_id
+       LEFT JOIN customer_payouts cp ON cp.id = a.entry_id AND a.entry_type = 'customer_payout'
+       LEFT JOIN report_entries cp_re ON cp_re.id = cp.report_entry_id
+       LEFT JOIN stores cp_s ON cp_s.id = cp_re.store_id
+       LEFT JOIN payout_rows pr ON pr.id = a.entry_id AND a.entry_type = 'payout_row'
+       LEFT JOIN payout_entries pe ON pe.id = pr.payout_entry_id
+       LEFT JOIN stores pe_s ON pe_s.id = pe.store_id
+       LEFT JOIN manager_expenses me ON me.id = a.entry_id AND a.entry_type = 'manager_expense'
+       LEFT JOIN stores me_s ON me_s.id = me.store_id
        WHERE a.resolved_at IS NULL
        ORDER BY a.edited_at DESC LIMIT 200`
     );
@@ -227,6 +238,7 @@ router.get('/alerts', async (req, res, next) => {
         new_value: r.new_value,
         edited_by_username: r.edited_by_username,
         edited_by_role: r.edited_by_role,
+        store_name: r.store_name || null,
         timestamps: formatBoth(r.edited_at),
       };
     });
