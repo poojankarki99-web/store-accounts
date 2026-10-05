@@ -666,10 +666,13 @@ async function showEditEntry(id) {
   if (!e || !box) return;
   box.innerHTML = '<div class="muted">Loading…</div>';
   try {
-    const [emps, { payouts }] = await Promise.all([
-      getEmployeesForTransfer(),
-      api('GET', '/api/entries/report/' + id + '/payouts'),
-    ]);
+    const emps = await getEmployeesForTransfer();
+    let payouts = [];
+    try {
+      const pr = await api('GET', '/api/entries/report/' + id + '/payouts');
+      payouts = pr.payouts || [];
+    } catch (_) { /* payouts optional; form still works */ }
+    const t = fmtBoth(e.created_at);
     const payoutRows = (payouts || []).map((p) => `
       <div class="payout-row" data-pid="${p.id}">
         <div class="row2">
@@ -678,7 +681,7 @@ async function showEditEntry(id) {
         </div>
         <div><label>Amount</label><input class="hee_pamt" type="number" step="0.01" min="0" value="${esc(p.amount)}"></div>
       </div>`).join('');
-    box.innerHTML = `<div class="muted" style="margin:8px 0 4px">Entered: ${esc(fmtBoth(e.created_at))}</div>
+    box.innerHTML = `<div class="muted" style="margin:8px 0 4px">Entered: ${esc(t.nepal)} Nepal · ${esc(t.central)} Central</div>
       <div class="row2" style="margin-top:8px">
         <div><label>IN</label><input type="number" id="hee_in_${id}" value="${esc(e.in_amount)}" step="0.01" min="0"></div>
         <div><label>Date</label><input type="date" id="hee_date_${id}" value="${esc(String(e.entry_date).slice(0, 10))}"></div></div>
