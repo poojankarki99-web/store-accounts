@@ -287,7 +287,6 @@ function tabsHtml() {
     ['reports', 'Reports'],
     ['holding', 'Holding'],
     ['expenses', 'Expenses'],
-    ['cih', 'CIH Report'],
     ['team', 'Team'],
   );
   if (S.user.role === 'admin') tabs.push(['audit', 'Edit Log']);
