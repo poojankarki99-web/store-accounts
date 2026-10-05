@@ -133,9 +133,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); bor
 /* Net Profit hero: big block number, double size */
 .net-hero { text-align: center; }
 .net-hero h2 { margin-bottom: 4px; }
-.net-hero-amount { font-size: 40px; font-weight: 800; letter-spacing: .02em; margin: 6px 0; }
-.net-hero-amount.neg { color: var(--danger); }
-.net-hero-amount.pos { color: var(--brand-dark); }
+.net-hero-amount { font-size: 40px; font-weight: 800; letter-spacing: .02em; margin: 6px 0; color: #fff; border-radius: 12px; padding: 14px 8px; }
+.net-hero-amount.neg { background: var(--danger); }
+.net-hero-amount.pos { background: var(--brand-dark); }
 
 /* Timestamps: bold + block letters */
 .stamp { font-weight: 800; text-transform: uppercase; letter-spacing: .02em; }

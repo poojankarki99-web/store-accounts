@@ -465,7 +465,8 @@ async function tabReports(body) {
       <div class="muted" style="margin-top:8px">Net Profit defaults to the entire month. All Time shows the current year.</div>
     </div>
     <div class="card">
-      <div class="net-row"><h2 style="margin:0">In &amp; Out (${esc(range.from)} → ${esc(range.to)})</h2>
+      <div class="net-row"><div style="text-align:left"><h2 style="margin:0">In &amp; Out</h2>
+        <div class="muted">${esc(range.from)} → ${esc(range.to)}</div></div>
         <button class="stamp-toggle ${S.showStamps ? 'on' : 'off'}" onclick="S.showStamps=!S.showStamps;render()"><span class="light"></span><span>Press To Turn Time Stamp On/Off</span></button></div>
       <div class="figure"><span class="k">Total In</span><span class="v pos">${money(incomeExpense.inSection.total)}</span></div>
       <div class="figure"><span class="k">Total Out</span><span class="v">${money(outBreakdown.customerPayoutTotal)}</span></div>
