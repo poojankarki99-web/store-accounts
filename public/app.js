@@ -612,7 +612,9 @@ async function tabHolding(body) {
       </div>
       <div class="muted">${tzLabel()}</div>
     </div>
-    <div class="card"><h2>Withdrawn Amount Details — ${esc(label)}</h2>${withdrawnDetailsHtml(d)}</div>
+    <div class="card"><div style="text-align:left"><h2 style="margin:0">Withdrawn Amount Detail</h2>
+      <div class="muted">${esc(d.period.start)} → ${esc(d.period.end)}</div></div>
+      <div style="margin-top:8px">${withdrawnDetailsHtml(d)}</div></div>
     ${await holdingMonthBrowserHtml()}`;
   } catch (e) {
     body.innerHTML = storeBarHtml() + `<div class="card"><div class="error">${esc(e.message)}</div></div>`;
