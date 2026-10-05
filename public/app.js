@@ -871,7 +871,7 @@ async function delUser(id, username) {
 
 /* ---------- Alerts tab (admin) ---------- */
 async function tabAlerts(body) {
-  body.innerHTML = storeBarHtml() + `<div class="card"><h2>Alerts</h2><div id="al_list" class="muted">Loading…</div></div>`;
+  body.innerHTML = `<div class="card"><h2>Alerts</h2><div id="al_list" class="muted">Loading…</div></div>`;
   try {
     const { alerts } = await api('GET', '/api/admin/alerts');
     $('#al_list').innerHTML = alerts.map((a) => `
