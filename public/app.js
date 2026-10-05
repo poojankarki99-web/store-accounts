@@ -8,6 +8,7 @@ const S = {
   tab: 'reports',
   from: '', to: '',
   empView: 'home',     // manager Emp Entry tab: home | reportEntry | payoutEntry
+  showStamps: true,    // Reports page: show/hide entry timestamps
 };
 
 const $ = (sel, el) => (el || document).querySelector(sel);
@@ -385,17 +386,28 @@ async function tabReports(body) {
       const g = byEmp[u];
       const net = Math.round((g.inTotal - g.outTotal) * 100) / 100;
       const entryHtml = g.entries.map((e) =>
-        `<div class="item">${stampHtml(e.created_at, entryUserLabel(e))}
+        `<div class="item">${S.showStamps ? stampHtml(e.created_at, entryUserLabel(e)) : ''}
           <div>IN: <b>${money(e.in_amount)}</b> · Net: <b class="${Number(e.net_amount) < 0 ? 'neg' : ''}">${money(e.net_amount)}</b></div>
         </div>`).join('');
-      const outDetailHtml = g.outRows.map((c) =>
-        `<div class="item">${stampHtml(c.created_at, entryUserLabel(c))}
-          <div><b>${money(c.amount)}</b> · ${esc(c.customer_name)} · <span class="stamp-sm">${esc(c.game_name)}</span></div>
-        </div>`).join('') || '<div class="muted">None.</div>';
+      // Details Of Out grouped by the entry date the data belongs to
+      const outByDate = {};
+      for (const c of g.outRows) {
+        const dk = String(c.entry_date).slice(0, 10);
+        (outByDate[dk] = outByDate[dk] || []).push(c);
+      }
+      const outDetailHtml = Object.keys(outByDate).sort().map((dk) =>
+        `<div class="section-title" style="margin-top:8px">${esc(dk)}</div>` +
+        outByDate[dk].map((c) =>
+          `<div class="item">${S.showStamps ? stampHtml(c.created_at, entryUserLabel(c)) : ''}
+            <div><b>${money(c.amount)}</b> · ${esc(c.customer_name)} · <span class="stamp-sm">${esc(c.game_name)}</span></div>
+          </div>`).join('')
+      ).join('') || '<div class="muted">None.</div>';
       return `<div class="emp-name">${esc(u)}</div>
-        <div class="figure"><span class="k">Total In</span><span class="v pos">${money(g.inTotal)}</span></div>
-        <div class="figure"><span class="k">Total Out</span><span class="v">${money(g.outTotal)}</span></div>
-        <div class="figure"><span class="k">Net</span><span class="v ${net < 0 ? 'neg' : 'pos'}">${money(net)}</span></div>
+        <div class="emp-totals">
+          <div><span class="k">Total In</span><span class="v pos">${money(g.inTotal)}</span></div>
+          <div><span class="k">Total Out</span><span class="v">${money(g.outTotal)}</span></div>
+          <div><span class="k">Net</span><span class="v ${net < 0 ? 'neg' : 'pos'}">${money(net)}</span></div>
+        </div>
         ${entryHtml}
         <details class="out-details"><summary>Details Of Out</summary>${outDetailHtml}</details>`;
     }).join('') || '<div class="muted">No entries in range.</div>';
@@ -421,7 +433,9 @@ async function tabReports(body) {
       <button class="btn ${mode === 'month' ? '' : 'secondary'}" onclick="clearRange()">This Month</button>
       <div class="muted" style="margin-top:8px">Net Profit defaults to the entire month. All Time shows the current year.</div>
     </div>
-    <div class="card"><h2>In &amp; Out (${esc(range.from)} → ${esc(range.to)})</h2>
+    <div class="card">
+      <div class="net-row"><h2 style="margin:0">In &amp; Out (${esc(range.from)} → ${esc(range.to)})</h2>
+        <button class="edit-ghost" onclick="S.showStamps=!S.showStamps;render()">Time Stamp: ${S.showStamps ? 'On' : 'Off'}</button></div>
       <div class="figure"><span class="k">Total In</span><span class="v pos">${money(incomeExpense.inSection.total)}</span></div>
       <div class="figure"><span class="k">Total Out</span><span class="v">${money(outBreakdown.customerPayoutTotal)}</span></div>
       <div class="figure"><span class="k">Net</span><span class="v ${netProfit < 0 ? 'neg' : 'pos'}">${money(netProfit)}</span></div>
