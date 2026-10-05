@@ -287,11 +287,17 @@ function tabsHtml() {
     ['reports', 'Reports'],
     ['holding', 'Holding'],
     ['expenses', 'Expenses'],
-    ['team', 'Team'],
+    ['settings', 'Settings'],
   );
-  if (S.user.role === 'admin') tabs.push(['audit', 'Edit Log']);
   return `<div class="tabs">${tabs.map(([k, label]) =>
     `<button class="${S.tab === k ? 'active' : ''}" onclick="setTab('${k}')">${label}</button>`).join('')}</div>`;
+}
+
+/* ---------- Settings tab: Team + Edit Log (admin) ---------- */
+async function tabSettings(body) {
+  body.innerHTML = `<div id="set_team"></div><div id="set_audit"></div>`;
+  await tabTeam($('#set_team'));
+  if (S.user.role === 'admin') await tabAudit($('#set_audit'));
 }
 function setTab(t) {
   S.tab = t;
@@ -338,7 +344,7 @@ function renderTab() {
       <button class="btn secondary" onclick="S.selected=null;render()">Choose Store</button></div>`;
     return;
   }
-  ({ reports: tabReports, holding: tabHolding, expenses: tabExpenses, cih: tabCih, team: tabTeam, alerts: tabAlerts, audit: tabAudit, empentry: tabEmpEntry })[S.tab](body);
+  ({ reports: tabReports, holding: tabHolding, expenses: tabExpenses, cih: tabCih, team: tabTeam, alerts: tabAlerts, audit: tabAudit, empentry: tabEmpEntry, settings: tabSettings })[S.tab](body);
 }
 
 function storeBarHtml() {
@@ -1023,7 +1029,7 @@ async function resolveAlert(id) {
 /* ---------- Edit log tab (admin) ---------- */
 let AUfrom = '', AUto = '';
 async function tabAudit(body) {
-  body.innerHTML = storeBarHtml() + `<div class="card"><h2>Edit Log</h2>
+  body.innerHTML = `<div class="card"><h2>Edit Log</h2>
     <div class="cal-row">
       <div><label>From</label><input type="date" id="au_from" value="${esc(AUfrom)}" onchange="AUfrom=$('#au_from').value;render()"></div>
       <div><label>To</label><input type="date" id="au_to" value="${esc(AUto)}" onchange="AUto=$('#au_to').value;render()"></div>
