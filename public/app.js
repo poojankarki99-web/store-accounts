@@ -459,82 +459,60 @@ function last7Range() {
 }
 
 /* ---------- Holding tab (single store only) ---------- */
-let Hmonth = '';     // YYYY-MM ('' = current Central month)
-let Hstart = '', Hend = '';
-let HrangeData = null;
+/* ---------- Holding tab (single store only) ---------- */
+let Hfrom = '', Hto = ''; // '' = this month
+function holdingMode() {
+  if (!Hfrom && !Hto) return 'month';
+  const t = centralTodayKey();
+  if (Hfrom === t && Hto === t) return 'today';
+  const y = centralDateKeyOffset(1);
+  if (Hfrom === y && Hto === y) return 'yesterday';
+  if (Hfrom === centralDateKeyOffset(6) && Hto === t) return 'last7';
+  return 'custom';
+}
+function applyHoldingRange() { Hfrom = $('#h_from').value; Hto = $('#h_to').value; render(); }
+function holdingToday() { const t = centralTodayKey(); Hfrom = t; Hto = t; render(); }
+function holdingYesterday() { const y = centralDateKeyOffset(1); Hfrom = y; Hto = y; render(); }
+function holdingLast7() { Hfrom = centralDateKeyOffset(6); Hto = centralTodayKey(); render(); }
+function holdingMonth() { Hfrom = ''; Hto = ''; render(); }
 async function tabHolding(body) {
   body.innerHTML = storeBarHtml() + `<div class="card"><h2>Holding Balance</h2><div class="muted">Loading…</div></div>`;
   try {
+    const mode = holdingMode();
     const canCut = S.user.role === 'manager';
-    // --- Month report (always shown) ---
-    const mq = new URLSearchParams({ store: S.selected, mode: 'month' });
-    if (Hmonth) mq.set('month', Hmonth);
-    const m = await api('GET', '/api/reports/holding?' + mq.toString());
-    Hmonth = m.period.month || '';
+    const q = new URLSearchParams({ store: S.selected });
+    if (mode === 'month') {
+      q.set('mode', 'month');
+    } else {
+      q.set('mode', 'range'); q.set('start', Hfrom); q.set('end', Hto);
+    }
+    const d = await api('GET', '/api/reports/holding?' + q.toString());
+    const label = mode === 'month' ? monthNameLabel(d.period.start) : d.period.label;
 
-    const monthCard = `
+    body.innerHTML = storeBarHtml() + `
     <div class="card"><h2>Holding Balance — ${esc(storeName(S.selected))}</h2>
-      <div class="row2"><input type="month" id="h_month" value="${esc(m.period.month)}">
-        <button class="btn small" onclick="Hmonth=$('#h_month').value;HrangeData=null;render()">Show</button>
-        <button class="btn small secondary" onclick="Hmonth='';HrangeData=null;render()">This Month</button></div>
-      <div class="figure" style="margin-top:12px"><span class="k">Holding Balance (${esc(m.period.label)})</span>
-        <span class="v ${m.holdingBalance < 0 ? 'neg' : 'pos'}">${money(m.holdingBalance)}</span></div>
-      <div class="figure"><span class="k">Total Withdrawn Amount (${esc(m.period.label)})</span>
-        <span class="v">${money(m.totalWithdrawn)}</span></div>
+      <div class="cal-row">
+        <div><label>From</label><input type="date" id="h_from" value="${esc(d.period.start)}" onchange="applyHoldingRange()"></div>
+        <div><label>To</label><input type="date" id="h_to" value="${esc(d.period.end)}" onchange="applyHoldingRange()"></div>
+      </div>
+      <button class="btn ${mode === 'today' ? '' : 'secondary'}" onclick="holdingToday()">Today</button>
+      <button class="btn ${mode === 'yesterday' ? '' : 'secondary'}" onclick="holdingYesterday()">Yesterday</button>
+      <button class="btn ${mode === 'last7' ? '' : 'secondary'}" onclick="holdingLast7()">Last 7 Days</button>
+      <button class="btn ${mode === 'month' ? '' : 'secondary'}" onclick="holdingMonth()">This Month</button>
+      <div class="figure" style="margin-top:12px"><span class="k">Holding Balance (${esc(label)})</span>
+        <span class="v ${d.holdingBalance < 0 ? 'neg' : 'pos'}">${money(d.holdingBalance)}</span></div>
+      <div class="figure"><span class="k">Total Withdrawn Amount (${esc(label)})</span>
+        <span class="v">${money(d.totalWithdrawn)}</span></div>
       <div class="muted">${tzLabel()}</div>
     </div>
-    <div class="card"><h2>Payout Entries — ${esc(m.period.label)}</h2>${payoutDetailHtml(m, canCut)}</div>
+    <div class="card"><h2>Payout Entries — ${esc(label)}</h2>${payoutDetailHtml(d, canCut)}</div>
     <div class="card"><h2>Report With Details</h2>
-      <div class="section-title">With Drawn Amount</div>${withdrawnDetailHtml(m) || '<div class="muted">None.</div>'}
+      <div class="section-title">With Drawn Amount</div>${withdrawnDetailHtml(d) || '<div class="muted">None.</div>'}
     </div>
-    <div class="card"><h2>Report Entries — ${esc(m.period.label)}</h2>${entryRowsHtml(m)}</div>`;
-
-    // --- Custom date range (optional, below the month report) ---
-    let rangeCard;
-    if (!HrangeData) {
-      rangeCard = `
-      <div class="card"><h2>Custom Date Range</h2>
-        <div class="row2"><div><label>Start Date</label><input type="date" id="h_start" value="${esc(Hstart)}"></div>
-          <div><label>End Date</label><input type="date" id="h_end" value="${esc(Hend)}"></div></div>
-        <button class="btn" onclick="showHoldingRange()">Show Range</button>
-        <div class="muted" style="margin-top:8px">Pick a start and end date to see this store's holding figures for that period.</div>
-      </div>`;
-    } else {
-      const r = HrangeData;
-      rangeCard = `
-      <div class="card"><h2>Holding — Custom Range (${esc(r.period.label)})</h2>
-        <div class="row2"><div><label>Start Date</label><input type="date" id="h_start" value="${esc(r.period.start)}"></div>
-          <div><label>End Date</label><input type="date" id="h_end" value="${esc(r.period.end)}"></div></div>
-        <div class="row2" style="margin-top:8px">
-          <button class="btn small" onclick="showHoldingRange()">Show Range</button>
-          <button class="btn small secondary" onclick="HrangeData=null;Hstart='';Hend='';render()">Clear</button></div>
-        <div class="figure" style="margin-top:12px"><span class="k">Holding Balance (${esc(r.period.label)})</span>
-          <span class="v ${r.holdingBalance < 0 ? 'neg' : 'pos'}">${money(r.holdingBalance)}</span></div>
-        <div class="figure"><span class="k">Total Withdrawn Amount (${esc(r.period.label)})</span>
-          <span class="v">${money(r.totalWithdrawn)}</span></div>
-        <div class="muted">${tzLabel()}</div>
-      </div>
-      <div class="card"><h2>Payout Entries — ${esc(r.period.label)}</h2>${payoutDetailHtml(r, canCut)}</div>
-      <div class="card"><h2>Report Entries — ${esc(r.period.label)}</h2>${entryRowsHtml(r)}</div>`;
-    }
-
-    body.innerHTML = storeBarHtml() + monthCard + rangeCard;
+    <div class="card"><h2>Report Entries — ${esc(label)}</h2>${entryRowsHtml(d)}</div>`;
   } catch (e) {
     body.innerHTML = storeBarHtml() + `<div class="card"><div class="error">${esc(e.message)}</div></div>`;
   }
-}
-async function showHoldingRange() {
-  Hstart = $('#h_start').value; Hend = $('#h_end').value;
-  try {
-    const q = new URLSearchParams({ store: S.selected, mode: 'range', start: Hstart, end: Hend });
-    HrangeData = await api('GET', '/api/reports/holding?' + q.toString());
-  } catch (e) {
-    HrangeData = null;
-    const card = document.querySelector('#tabbody .card:last-child');
-    if (card) card.insertAdjacentHTML('beforeend', `<div class="error">${esc(e.message)}</div>`);
-    return;
-  }
-  render();
 }
 function payoutDetailHtml(d, canCut) {
   return d.details.map((pe) => `
