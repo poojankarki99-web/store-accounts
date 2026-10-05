@@ -666,7 +666,18 @@ async function showEditEntry(id) {
   if (!e || !box) return;
   box.innerHTML = '<div class="muted">Loading…</div>';
   try {
-    const emps = await getEmployeesForTransfer();
+    const [emps, { payouts }] = await Promise.all([
+      getEmployeesForTransfer(),
+      api('GET', '/api/entries/report/' + id + '/payouts'),
+    ]);
+    const payoutRows = (payouts || []).map((p) => `
+      <div class="payout-row" data-pid="${p.id}">
+        <div class="row2">
+          <div><label>Name</label><input class="hee_pname" value="${esc(p.customer_name)}"></div>
+          <div><label>Game</label><input class="hee_pgame" value="${esc(p.game_name)}"></div>
+        </div>
+        <div><label>Amount</label><input class="hee_pamt" type="number" step="0.01" min="0" value="${esc(p.amount)}"></div>
+      </div>`).join('');
     box.innerHTML = `<div class="muted" style="margin:8px 0 4px">Entered: ${esc(fmtBoth(e.created_at))}</div>
       <div class="row2" style="margin-top:8px">
         <div><label>IN</label><input type="number" id="hee_in_${id}" value="${esc(e.in_amount)}" step="0.01" min="0"></div>
@@ -674,6 +685,7 @@ async function showEditEntry(id) {
       <div style="margin-top:8px"><label>Employee</label><select id="hee_emp_${id}">
           ${emps.map((x) => `<option value="${x.id}" ${x.id === e.user_id ? 'selected' : ''}>${esc(x.username)}</option>`).join('')}
         </select></div>
+      ${payoutRows ? `<div class="section-title" style="margin-top:10px">Customer Out (edit amounts)</div><div id="hee_payouts_${id}">${payoutRows}</div>` : ''}
       <div class="row2" style="margin-top:8px">
         <button class="btn small" onclick="saveEditEntry(${id})">Save</button>
         <button class="btn small secondary" onclick="$('#hef_${id}').innerHTML=''">Cancel</button>
@@ -688,6 +700,17 @@ async function saveEditEntry(id) {
       userId: Number($('#hee_emp_' + id).value),
       entryDate: $('#hee_date_' + id).value,
     });
+    // Save any edited customer payout rows
+    const box = $('#hee_payouts_' + id);
+    if (box) {
+      for (const row of box.querySelectorAll('.payout-row')) {
+        await api('PUT', '/api/entries/customer-payout/' + row.dataset.pid, {
+          customerName: row.querySelector('.hee_pname').value,
+          gameName: row.querySelector('.hee_pgame').value,
+          amount: row.querySelector('.hee_pamt').value,
+        });
+      }
+    }
     render();
   } catch (e) { if (errBox) errBox.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
 }

@@ -148,6 +148,23 @@ router.put('/report/:id', canEdit, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// Get customer payouts for a report entry (for the edit form)
+router.get('/report/:id/payouts', canEdit, async (req, res, next) => {
+  try {
+    const { rows: er } = await pool.query('SELECT store_id FROM report_entries WHERE id = $1', [req.params.id]);
+    if (!er[0]) return res.status(404).json({ error: 'Entry not found' });
+    if (req.user.role !== 'admin') {
+      const { accessibleStoreIds } = require('../auth');
+      const ids = await accessibleStoreIds(req.user);
+      if (!ids.includes(er[0].store_id)) return res.status(403).json({ error: 'No access to this store' });
+    }
+    const { rows } = await pool.query(
+      'SELECT id, customer_name, game_name, amount FROM customer_payouts WHERE report_entry_id = $1 ORDER BY id',
+      [req.params.id]
+    );
+    res.json({ payouts: rows });
+  } catch (e) { next(e); }
+});
 router.put('/customer-payout/:id', canEdit, async (req, res, next) => {
   try {
     const { rows } = await pool.query(
