@@ -979,15 +979,25 @@ async function delUser(id, username) {
 
 /* ---------- Alerts tab (admin) ---------- */
 async function tabAlerts(body) {
-  body.innerHTML = `<div class="card"><h2>Alerts</h2><div id="al_list" class="muted">Loading…</div></div>`;
+  body.innerHTML = `<div class="card"><div class="net-row"><h2 style="margin:0">Alerts</h2>
+    <button class="btn small secondary" id="resolveAllBtn" onclick="resolveAllAlerts()">Resolve All</button></div>
+    <div id="al_list" class="muted">Loading…</div></div>`;
   try {
     const { alerts } = await api('GET', '/api/admin/alerts');
+    if (!alerts.length) { const b = $('#resolveAllBtn'); if (b) b.style.display = 'none'; }
     $('#al_list').innerHTML = alerts.map((a) => `
       <div class="alert ${a.severity}" id="alert-${a.id}">${esc(a.text)}
         <div class="stamp-sm">${tzStampLine(a.timestamps)}</div>
         <button class="btn secondary small" onclick="resolveAlert(${a.id})">Resolved</button>
       </div>`).join('') || '<div class="muted">No edits yet.</div>';
   } catch (e) { $('#al_list').innerHTML = `<div class="error">${esc(e.message)}</div>`; }
+}
+async function resolveAllAlerts() {
+  if (!confirm('Mark all alerts as resolved?')) return;
+  try {
+    await api('POST', '/api/admin/alerts/resolve-all', {});
+    render();
+  } catch (e) { alert(e.message); }
 }
 async function resolveAlert(id) {
   try {

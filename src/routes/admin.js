@@ -205,6 +205,15 @@ router.get('/alerts', async (req, res, next) => {
 
 // POST /api/admin/alerts/:id/resolve — mark an alert resolved (admin only).
 // Resolved alerts disappear from the Alerts tab but stay in the Edit Log.
+router.post('/alerts/resolve-all', async (req, res, next) => {
+  try {
+    const { rowCount } = await pool.query(
+      `UPDATE edit_audit SET resolved_at = NOW(), resolved_by = $1 WHERE resolved_at IS NULL`,
+      [req.session.userId]
+    );
+    res.json({ ok: true, resolved: rowCount });
+  } catch (e) { next(e); }
+});
 router.post('/alerts/:id/resolve', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
