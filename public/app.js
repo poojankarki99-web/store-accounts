@@ -1005,7 +1005,6 @@ async function toggleDeletedList() {
       </div>`).join('');
   } catch (e) { box.innerHTML = '<div class="err">Failed to load deleted list.</div>'; }
 }
-}
 async function delEmployee() {
   const errBox = $('#del_emp_err'); errBox.innerHTML = '';
   const id = $('#del_emp_sel').value;
