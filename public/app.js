@@ -1008,10 +1008,19 @@ async function resolveAlert(id) {
 }
 
 /* ---------- Edit log tab (admin) ---------- */
+let AUfrom = '', AUto = '';
 async function tabAudit(body) {
-  body.innerHTML = storeBarHtml() + `<div class="card"><h2>Edit Log</h2><div id="au_list" class="muted">Loading…</div></div>`;
+  body.innerHTML = storeBarHtml() + `<div class="card"><h2>Edit Log</h2>
+    <div class="cal-row">
+      <div><label>From</label><input type="date" id="au_from" value="${esc(AUfrom)}" onchange="AUfrom=$('#au_from').value;render()"></div>
+      <div><label>To</label><input type="date" id="au_to" value="${esc(AUto)}" onchange="AUto=$('#au_to').value;render()"></div>
+    </div>
+    <div id="au_list" class="muted">Loading…</div></div>`;
   try {
-    const { audit } = await api('GET', '/api/admin/audit');
+    const q = new URLSearchParams();
+    if (AUfrom) q.set('from', AUfrom);
+    if (AUto) q.set('to', AUto);
+    const { audit } = await api('GET', '/api/admin/audit?' + q.toString());
     $('#au_list').innerHTML = audit.map((a) => `
       <div class="audit-row">
         <div><b>${esc(a.edited_by_username)}</b> (${esc(a.edited_by_role)}) — <code>${esc(a.entry_type)} #${a.entry_id}</code> · <code>${esc(a.field_name)}</code></div>

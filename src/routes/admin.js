@@ -3,7 +3,7 @@
 const express = require('express');
 const { pool } = require('../db');
 const { validPassword, validUsername, hashPassword, getUserStores, requireAuth, requireRole } = require('../auth');
-const { formatBoth } = require('../time');
+const { formatBoth, isValidDateKey } = require('../time');
 
 const router = express.Router();
 router.use(requireAuth, requireRole('admin'));
@@ -163,10 +163,23 @@ router.post('/users/:id/reset-password', async (req, res, next) => {
 // ---------- Edit log (admin ONLY) ----------
 router.get('/audit', async (req, res, next) => {
   try {
+    const conds = [];
+    const vals = [];
+    if (req.query.from && isValidDateKey(req.query.from)) {
+      vals.push(req.query.from);
+      conds.push(`DATE(a.edited_at AT TIME ZONE 'America/Chicago') >= $${vals.length}`);
+    }
+    if (req.query.to && isValidDateKey(req.query.to)) {
+      vals.push(req.query.to);
+      conds.push(`DATE(a.edited_at AT TIME ZONE 'America/Chicago') <= $${vals.length}`);
+    }
+    const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
     const { rows } = await pool.query(
       `SELECT a.*, u.username AS edited_by_username, u.role AS edited_by_role
        FROM edit_audit a JOIN users u ON u.id = a.edited_by
-       ORDER BY a.edited_at DESC LIMIT 500`
+       ${where}
+       ORDER BY a.edited_at DESC LIMIT 500`,
+      vals
     );
     res.json({ audit: rows.map((r) => ({ ...r, timestamps: formatBoth(r.edited_at) })) });
   } catch (e) { next(e); }

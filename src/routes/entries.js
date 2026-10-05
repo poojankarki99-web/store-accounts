@@ -152,7 +152,7 @@ router.put('/report/:id', canEdit, async (req, res, next) => {
     changes.net_amount = Math.round((newIn - num(cpSum[0].t)) * 100) / 100;
     const r = await applyAuditedUpdate({
       table: 'report_entries', id: cur.id, entryType: 'report_entry',
-      changes, current: cur, editedBy: req.user.id,
+      changes, current: cur, editedBy: req.user.id, skipAudit: req.user.role === 'admin',
     });
     res.json({ ok: true, ...r });
   } catch (e) { next(e); }
@@ -217,7 +217,7 @@ router.put('/customer-payout/:id', canEdit, async (req, res, next) => {
     if (req.body.amount !== undefined) changes.amount = num(req.body.amount);
     const r = await applyAuditedUpdate({
       table: 'customer_payouts', id: cur.id, entryType: 'customer_payout',
-      changes, current: cur, editedBy: req.user.id,
+      changes, current: cur, editedBy: req.user.id, skipAudit: req.user.role === 'admin',
     });
     if (changes.amount !== undefined) await recalcEntryNet(cur.report_entry_id);
     res.json({ ok: true, ...r });
@@ -250,7 +250,7 @@ router.put('/payout-row/:id', canEdit, async (req, res, next) => {
     }
     const r = await applyAuditedUpdate({
       table: 'payout_rows', id: cur.id, entryType: 'payout_row',
-      changes, current: cur, editedBy: req.user.id,
+      changes, current: cur, editedBy: req.user.id, skipAudit: req.user.role === 'admin',
     });
     res.json({ ok: true, ...r });
   } catch (e) { next(e); }

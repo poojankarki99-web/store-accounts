@@ -16,8 +16,8 @@ async function auditEdit({ entryType, entryId, fieldName, oldValue, newValue, ed
 }
 
 // Apply a set of field changes to a row and audit each change.
-// table: table name, idCol: pk column, id: pk value, changes: {field: newValue}, current: current row object.
-async function applyAuditedUpdate({ table, idCol = 'id', id, entryType, changes, current, editedBy }) {
+// skipAudit: when true (admin edits), apply changes without creating audit/alert records.
+async function applyAuditedUpdate({ table, idCol = 'id', id, entryType, changes, current, editedBy, skipAudit = false }) {
   const sets = [];
   const vals = [];
   let i = 1;
@@ -28,7 +28,7 @@ async function applyAuditedUpdate({ table, idCol = 'id', id, entryType, changes,
     if (norm(oldVal) === norm(newVal)) continue;
     sets.push(`${field} = $${i++}`);
     vals.push(newVal);
-    await auditEdit({ entryType, entryId: id, fieldName: field, oldValue: oldVal, newValue: newVal, editedBy });
+    if (!skipAudit) await auditEdit({ entryType, entryId: id, fieldName: field, oldValue: oldVal, newValue: newVal, editedBy });
   }
   if (!sets.length) return { updated: false };
   vals.push(id);

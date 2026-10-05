@@ -69,7 +69,7 @@ router.put('/expenses/:id', async (req, res, next) => {
     if (req.body.date !== undefined && isValidDateKey(req.body.date)) changes.expense_date = req.body.date;
     const r = await applyAuditedUpdate({
       table: 'manager_expenses', id: cur.id, entryType: 'manager_expense',
-      changes, current: cur, editedBy: req.user.id,
+      changes, current: cur, editedBy: req.user.id, skipAudit: req.user.role === 'admin',
     });
     res.json({ ok: true, ...r });
   } catch (e) { next(e); }
