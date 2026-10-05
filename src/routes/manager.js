@@ -123,24 +123,6 @@ router.get('/employees', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// ---------- Manager views deleted employees in their scope ----------
-router.get('/deleted', async (req, res, next) => {
-  try {
-    const ids = await accessibleStoreIds(req.user);
-    const { rows } = await pool.query(`
-      SELECT DISTINCT u.id, u.username, u.role, u.deleted_at,
-             c.username AS manager, d.username AS deleted_by_name
-      FROM users u
-      LEFT JOIN users c ON c.id = u.created_by
-      LEFT JOIN users d ON d.id = u.deleted_by
-      LEFT JOIN user_stores us ON us.user_id = u.id
-      WHERE COALESCE(u.is_deleted, FALSE)
-        AND (u.created_by = $1 OR us.store_id = ANY($2))
-      ORDER BY u.deleted_at DESC NULLS LAST, u.username`, [req.user.id, ids]);
-    res.json({ users: rows });
-  } catch (e) { next(e); }
-});
-
 // ---------- Manager creates EMPLOYEES for their own stores ----------
 router.post('/employees', async (req, res, next) => {
   const client = await pool.connect();
