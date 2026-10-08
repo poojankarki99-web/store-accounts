@@ -753,8 +753,18 @@ async function showEditEntry(id) {
       <div class="row2" style="margin-top:8px">
         <button class="btn small" onclick="saveEditEntry(${id})">Save</button>
         <button class="btn small secondary" onclick="$('#hef_${id}').innerHTML=''">Cancel</button>
-      </div><div id="hee_err_${id}"></div>`;
+      </div>
+      <div style="margin-top:8px"><button class="btn small danger" onclick="deleteEditEntry(${id})">Delete</button></div>
+      <div id="hee_err_${id}"></div>`;
   } catch (err) { box.innerHTML = `<div class="error">${esc(err.message)}</div>`; }
+}
+async function deleteEditEntry(id) {
+  if (!confirm('Delete this entry completely? The IN amount and all its Customer Out rows will be removed. This cannot be undone.')) return;
+  const errBox = $('#hee_err_' + id);
+  try {
+    await api('DELETE', '/api/entries/report/' + id);
+    render();
+  } catch (e) { if (errBox) errBox.innerHTML = `<div class="error">${esc(e.message)}</div>`; }
 }
 async function saveEditEntry(id) {
   const errBox = $('#hee_err_' + id);

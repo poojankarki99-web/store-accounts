@@ -164,7 +164,31 @@ router.put('/report/:id', canEdit, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Get customer payouts for a report entry (for the edit form)
+// Delete a report entry completely (entry + its Customer Out rows)
+router.delete('/report/:id', canEdit, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM report_entries WHERE id = $1', [req.params.id]);
+    const cur = rows[0];
+    if (!cur) return res.status(404).json({ error: 'Entry not found' });
+    if (req.user.role !== 'admin') {
+      const { accessibleStoreIds } = require('../auth');
+      const ids = await accessibleStoreIds(req.user);
+      if (!ids.includes(cur.store_id)) return res.status(403).json({ error: 'No access to this store' });
+    }
+    // Audit the deletion for managers (admin edits are not tracked)
+    if (req.user.role !== 'admin') {
+      const { auditEdit } = require('../audit');
+      await auditEdit({
+        entryType: 'report_entry', entryId: cur.id, fieldName: 'deleted',
+        oldValue: `IN ${cur.in_amount} on ${cur.entry_date}`, newValue: 'deleted',
+        editedBy: req.user.id,
+      });
+    }
+    await pool.query('DELETE FROM customer_payouts WHERE report_entry_id = $1', [cur.id]);
+    await pool.query('DELETE FROM report_entries WHERE id = $1', [cur.id]);
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
 router.get('/report/:id/payouts', canEdit, async (req, res, next) => {
   try {
     const { rows: er } = await pool.query('SELECT store_id FROM report_entries WHERE id = $1', [req.params.id]);
